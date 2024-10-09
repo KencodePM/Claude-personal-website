@@ -1,0 +1,163 @@
+/* 基本樣式 */
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header 樣式 */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f0f0f0;
+}
+
+header h1 {
+  margin: 0;
+}
+
+nav ul {
+  display: flex;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+nav ul li {
+  margin-left: 1rem;
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: #333;
+}
+
+/* Main 內容樣式 */
+main {
+  padding: 2rem;
+  flex: 1;
+}
+
+section {
+  margin-bottom: 2rem;
+}
+
+/* Footer 樣式 */
+footer {
+  background-color: #f0f0f0;
+  text-align: center;
+  padding: 1rem;
+  width: 100%;
+  /* 移除 position: fixed; 和 bottom: 0; */
+}
+
+/* 新增技能部分的樣式 */
+#skills {
+    padding: 2rem;
+    background-color: #f9f9f9;
+}
+
+.skills-container {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.skill-category {
+    flex: 1;
+    min-width: 300px;
+    max-width: 500px;
+}
+
+.skill-category h3 {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.skill-category ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.skill-category ul li {
+    background-color: #e0e0e0;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+/* 軟體工程技能圖標樣式 */
+.skill-icons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.skill-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding-bottom: 30px;
+}
+
+.skill-item img {
+    width: 50px;
+    height: 50px;
+    transition: transform 0.3s ease;
+}
+
+/* 軟體工程技能圖標樣式保持不變 */
+
+/* 其他樣式保持不變 */
+
+/* 項目展示樣式 */
+#projects ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+#projects li {
+    margin-bottom: 15px;
+}
+
+#projects a {
+    display: inline-block;
+    padding: 10px 15px;
+    background-color: #f0f0f0;
+    color: #333;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#projects a .hover-text {
+    position: absolute;
+    right: -100%;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+#projects a:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.05);
+    padding-right: 70px;
+}
+
+#projects a:hover .hover-text {
+    right: 15px;
+    opacity: 1;
+}
