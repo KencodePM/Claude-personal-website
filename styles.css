@@ -1,63 +1,175 @@
 /* 基本樣式 */
 body {
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
-/* Header 樣式 */
 header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background-color: #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #f0f0f0;
 }
 
 header h1 {
-  margin: 0;
+    margin: 0;
 }
 
 nav ul {
-  display: flex;
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
+    display: flex;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
 }
 
 nav ul li {
-  margin-left: 1rem;
+    margin-left: 1rem;
 }
 
 nav ul li a {
-  text-decoration: none;
-  color: #333;
+    text-decoration: none;
+    color: #333;
 }
 
-/* Main 內容樣式 */
 main {
-  padding: 2rem;
-  flex: 1;
+    flex: 1;
+    padding: 2rem;
 }
 
 section {
-  margin-bottom: 2rem;
+    margin-bottom: 2rem;
 }
 
-/* Footer 樣式 */
-footer {
-  background-color: #f0f0f0;
-  text-align: center;
-  padding: 1rem;
-  width: 100%;
-  /* 移除 position: fixed; 和 bottom: 0; */
+/* 項目展示樣式 */
+.projects-outer-wrapper {
+    position: relative;
+    overflow: visible; /* 確保按鈕不會被裁剪 */
 }
 
-/* 新增技能部分的樣式 */
+.projects-wrapper {
+    overflow: hidden;
+}
+
+.projects-container {
+    display: flex;
+    transition: transform 0.3s ease;
+}
+
+.project-item {
+    flex: 0 0 calc(33.333% - 40px); /* 基本上每行顯示3個項目，減去間距 */
+    margin: 0 20px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.project-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.project-item h3 {
+    margin: 10px 0;
+}
+
+.project-brief {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.project-description {
+    font-size: 0.9em;
+    margin-bottom: 20px;
+}
+
+.project-link {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    padding: 8px 15px;
+    border: 1px solid #333;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.project-link:hover {
+    background-color: #333;
+    color: #fff;
+}
+
+.scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 10;
+    border-radius: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s, opacity 0.3s;
+    pointer-events: auto; /* 確保按鈕可以接收點擊事件 */
+}
+
+.scroll-btn:hover {
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+.scroll-left {
+    left: 10px;
+}
+
+.scroll-right {
+    right: 10px;
+}
+
+.scroll-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 響應式設計 */
+@media (max-width: 1200px) {
+    .project-item {
+        flex: 0 0 calc(50% - 40px); /* 每行顯示2個項目 */
+    }
+}
+
+@media (max-width: 768px) {
+    .project-item {
+        flex: 0 0 calc(100% - 40px); /* 每行顯示1個項目 */
+    }
+    .projects-wrapper {
+        padding: 0 40px; /* 縮小按鈕間距 */
+    }
+    .scroll-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+}
+
+/* 技能區塊樣式 */
 #skills {
     padding: 2rem;
     background-color: #f9f9f9;
@@ -116,48 +228,169 @@ footer {
     transition: transform 0.3s ease;
 }
 
-/* 軟體工程技能圖標樣式保持不變 */
-
-/* 其他樣式保持不變 */
-
-/* 項目展示樣式 */
-#projects ul {
-    list-style-type: none;
-    padding: 0;
+.skill-item:hover img {
+    transform: translateY(-5px);
 }
 
-#projects li {
-    margin-bottom: 15px;
-}
-
-#projects a {
-    display: inline-block;
-    padding: 10px 15px;
-    background-color: #f0f0f0;
-    color: #333;
-    text-decoration: none;
-    border-radius: 5px;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-#projects a .hover-text {
+.skill-name {
     position: absolute;
-    right: -100%;
-    top: 50%;
-    transform: translateY(-50%);
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
 }
 
-#projects a:hover {
-    background-color: #e0e0e0;
-    transform: scale(1.05);
-    padding-right: 70px;
-}
-
-#projects a:hover .hover-text {
-    right: 15px;
+.skill-item:hover .skill-name {
     opacity: 1;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+/* AWS 圖標特殊處理 */
+.skill-item img[alt="AWS"] {
+    width: 70px;  /* AWS 圖標稍大一些 */
+    height: auto;  /* 保持寬高比 */
+}
+
+/* Footer 樣式 */
+footer {
+    background-color: #f0f0f0;
+    text-align: center;
+    padding: 1rem;
+    width: 100%;
+}
+
+/* 項目描述動畫 */
+.project-description {
+    opacity: 0;
+    max-height: 0;
+    transition: opacity 0.3s ease, max-height 0.3s ease;
+}
+
+#projects li:hover .project-description {
+    opacity: 1;
+    max-height: 100px; /* 足夠顯示內容 */
+}
+
+/* 相關經歷區塊樣式 */
+#experience {
+    padding: 2rem;
+    background-color: #f0f0f0;
+}
+
+.experience-container {
+    display: flex;
+    flex-direction: column; /* 改為垂直排列 */
+    gap: 2rem; /* 區塊之間的間距 */
+}
+
+.experience-item {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.experience-item h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.experience-item .company {
+    font-weight: bold;
+    color: #666;
+}
+
+.experience-item .date {
+    font-style: italic;
+    color: #888;
+    margin-bottom: 1rem;
+}
+
+.experience-item ul {
+    padding-left: 1.2rem;
+}
+
+.experience-item li {
+    margin-bottom: 0.5rem;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .experience-item {
+        flex: 1 1 100%;
+    }
+}
+
+/* 聯絡表單區塊樣式 */
+#contact {
+    padding: 2rem;
+    background-color: #f9f9f9;
+}
+
+#contact h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+#contact-form {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.submit-btn {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.submit-btn:hover {
+    background-color: #0056b3;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    #contact-form {
+        padding: 1.5rem;
+    }
 }

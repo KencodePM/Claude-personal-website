@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的個人網站</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="script.js"></script>
 </head>
 <body>
     <header>
@@ -21,16 +22,46 @@
     <main>
         <section id="about">
             <h2>關於我</h2>
-            <p>作為一個在科技業工作的教育業者</p>
+            <p>
+            
+            大家好，我是李泓毅，擁有專案和產品經理的豐富經驗，並且具備後端開發的技術背景。在專案管理方面，我曾帶領多個團隊成功推動數位轉型專案，特別是在製造業中，致力於技術優化和提升。作為產品經理，我善於分析市場需求，並確保產品從設計到交付都能滿足使用者和商業目標。
+            
+            後端開發方面，我有扎實的程式設計和系統架構經驗，能夠以技術支持產品的實現，確保系統的穩定性和可擴展性。我樂於結合技術與管理，推動企業在數位化時代中取得更大的成就。
+            </p>
         </section>
 
         <section id="projects">
             <h2>項目展示</h2>
-            <ul>
-                <li><a href="https://project1.example.com" target="_blank">項目 1</a></li>
-                <li><a href="https://project2.example.com" target="_blank">項目 2</a></li>
-                <li><a href="https://project3.example.com" target="_blank">項目 3</a></li>
-            </ul>
+            <div class="projects-outer-wrapper">
+                <button class="scroll-btn scroll-left" id="scrollLeft">&lt;</button>
+                <div class="projects-wrapper">
+                    <div class="projects-container">
+                        <div class="project-item">
+                            <img src="path/to/project1-image.jpg" alt="項目 1 圖片" class="project-image">
+                            <h3>項目 1</h3>
+                            <p class="project-brief">React 和 Node.js 全棧應用</p>
+                            <p class="project-description">這是項目 1 的詳細說明。它是一個使用 React 和 Node.js 開發的全棧應用，實現了...（更多詳細描述）</p>
+                            <a href="https://project1.example.com" target="_blank" class="project-link">查看項目</a>
+                        </div>
+                        <div class="project-item">
+                            <img src="path/to/project2-image.jpg" alt="項目 2 圖片" class="project-image">
+                            <h3>項目 2</h3>
+                            <p class="project-brief">Python 數據分析項目</p>
+                            <p class="project-description">項目 2 是一個 Python 數據分析項目，使用了 Pandas 和 Matplotlib 庫。它主要用於...（更多詳細描述）</p>
+                            <a href="https://project2.example.com" target="_blank" class="project-link">查看項目</a>
+                        </div>
+                        <div class="project-item">
+                            <img src="path/to/project3-image.jpg" alt="項目 3 圖片" class="project-image">
+                            <h3>項目 3</h3>
+                            <p class="project-brief">Java Spring Boot 後端服務</p>
+                            <p class="project-description">這個項目是一個 Java Spring Boot 後端服務，提供 RESTful API。它的主要功能包括...（更多詳細描述）</p>
+                            <a href="https://project3.example.com" target="_blank" class="project-link">查看項目</a>
+                        </div>
+                        <!-- 可以添加更多項目 -->
+                    </div>
+                </div>
+                <button class="scroll-btn scroll-right" id="scrollRight">&gt;</button>
+            </div>
         </section>
 
         <section id="skills">
@@ -69,11 +100,73 @@
                 </div>
             </div>
         </section>
+
+        <!-- 在技能區塊之後添加 -->
+        <section id="experience">
+            <h2>相關經歷</h2>
+            <div class="experience-container">
+                <div class="experience-item">
+                    <h3>資深產品經理</h3>
+                    <p class="company">科技創新公司</p>
+                    <p class="date">2020年1月 - 現在</p>
+                    <ul>
+                        <li>領導開發團隊完成多個大型項目，提高產品使用率30%</li>
+                        <li>��定產品策略，成功將用戶群擴大50%</li>
+                        <li>優化產品流程，提升團隊效率20%</li>
+                    </ul>
+                </div>
+                <div class="experience-item">
+                    <h3>後端開發工程師</h3>
+                    <p class="company">數據分析公司</p>
+                    <p class="date">2017年6月 - 2019年12月</p>
+                    <ul>
+                        <li>設計並實現高效的RESTful API，支持每日百萬級請求</li>
+                        <li>優化數據庫查詢，將響應時間縮短40%</li>
+                        <li>參與微服務架構的設計和實現，提高系統可擴展性</li>
+                    </ul>
+                </div>
+                <div class="experience-item">
+                    <h3>初級軟件工程師</h3>
+                    <p class="company">互聯網初創公司</p>
+                    <p class="date">2015年7月 - 2017年5月</p>
+                    <ul>
+                        <li>參與開發公司核心產品的多個模塊</li>
+                        <li>實現前後端數據交互，確保用戶體驗流暢</li>
+                        <li>編寫單元測試，提高代碼質量和可維護性</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 在經歷區塊之後添加 -->
+        <section id="contact">
+            <h2>聯絡我</h2>
+            <form id="contact-form">
+                <div class="form-group">
+                    <label for="name">姓名：</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">電話：</label>
+                    <input type="tel" id="phone" name="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">電子郵件：</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="message">需求說明：</label>
+                    <textarea id="message" name="message" rows="4" required></textarea>
+                </div>
+                <button type="submit" class="submit-btn">提交</button>
+            </form>
+        </section>
     </main>
 
     <footer>
         <!-- 頁面底部的 footer 內容 -->
         <p>&copy; 2024 我的個人網站. 版權所有.</p>
     </footer>
+    <script src="script.js"></script>
 </body>
 </html>
