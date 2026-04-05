@@ -58,3 +58,6 @@ prisma/*.db
 
 # Misc
 .turbo
+
+# Claude Code local config (contains machine-specific paths)
+.claude/
