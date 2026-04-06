@@ -4,14 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Idempotency guard — skip if already seeded
-  const existingUser = await prisma.user.findFirst();
-  if (existingUser) {
-    console.log('⏭️  Database already seeded, skipping...');
-    return;
-  }
-
-  // Create admin user
+  // --- Admin user (always upsert) ---
   const hash = await bcrypt.hash('admin123', 10);
   await prisma.user.upsert({
     where: { email: 'admin@portfolio.com' },
@@ -19,9 +12,9 @@ async function main() {
     create: { email: 'admin@portfolio.com', password: hash }
   });
 
-  // Create profile
-  await prisma.profile.deleteMany();
-  await prisma.profile.create({
+  // --- Profile (create only if missing) ---
+  const existingProfile = await prisma.profile.findFirst();
+  if (!existingProfile) await prisma.profile.create({
     data: {
       name: '李紅義',
       title: 'Full Stack Developer',
@@ -34,8 +27,10 @@ async function main() {
     }
   });
 
-  // Create skills
-  await prisma.skill.deleteMany();
+  // --- Skills (create only if missing) ---
+  const skillCount = await prisma.skill.count();
+  if (skillCount > 0) { console.log('✅ Seed complete'); return; }
+
   const skills = [
     { name: 'React', level: 92, category: 'Frontend', order: 0 },
     { name: 'TypeScript', level: 88, category: 'Frontend', order: 1 },
@@ -52,8 +47,7 @@ async function main() {
   ];
   for (const skill of skills) await prisma.skill.create({ data: skill });
 
-  // Create experience
-  await prisma.experience.deleteMany();
+  // --- Experience ---
   const experiences = [
     {
       company: 'TechCorp Taiwan',
@@ -85,8 +79,7 @@ async function main() {
   ];
   for (const exp of experiences) await prisma.experience.create({ data: exp });
 
-  // Create projects
-  await prisma.project.deleteMany();
+  // --- Projects ---
   const projects = [
     {
       title: 'E-Commerce Platform',
@@ -126,8 +119,7 @@ async function main() {
   ];
   for (const p of projects) await prisma.project.create({ data: p });
 
-  // Create testimonials
-  await prisma.testimonial.deleteMany();
+  // --- Testimonials ---
   const testimonials = [
     {
       name: '陳志偉',
@@ -164,4 +156,6 @@ async function main() {
   console.log('🔑 Password: admin123');
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch(e => { console.error('❌ Seed error:', e); process.exit(1); })
+  .finally(() => prisma.$disconnect());
