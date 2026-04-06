@@ -4,6 +4,13 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Idempotency guard — skip if already seeded
+  const existingUser = await prisma.user.findFirst();
+  if (existingUser) {
+    console.log('⏭️  Database already seeded, skipping...');
+    return;
+  }
+
   // Create admin user
   const hash = await bcrypt.hash('admin123', 10);
   await prisma.user.upsert({

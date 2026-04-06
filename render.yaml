@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: portfolio-backend
+    env: node
+    region: singapore        # 最近台灣的節點
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma db push --skip-generate && node dist/seed.js && node dist/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000           # Render 預設 port
+      - key: DATABASE_URL
+        value: file:./data/portfolio.db
+      - key: JWT_SECRET
+        generateValue: true    # Render 自動生成隨機值
+      - key: FRONTEND_URL
+        sync: false            # 部署後手動填入 Vercel URL
