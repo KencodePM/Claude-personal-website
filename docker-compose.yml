@@ -1,6 +1,24 @@
 version: '3.9'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: portfolio-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=portfolio
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - portfolio_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -8,15 +26,17 @@ services:
     container_name: portfolio-backend
     restart: unless-stopped
     environment:
-      - DATABASE_URL=file:/app/data/prod.db
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/portfolio
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - PORT=4000
       - FRONTEND_URL=http://localhost
     volumes:
-      - backend_data:/app/data
       - uploads:/app/uploads
     networks:
       - portfolio_net
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
       interval: 30s
@@ -54,7 +74,7 @@ services:
       - frontend
 
 volumes:
-  backend_data:
+  postgres_data:
   uploads:
 
 networks:
