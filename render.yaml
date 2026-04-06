@@ -10,8 +10,8 @@ services:
     region: singapore
     plan: free
     rootDir: backend
-    buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && node dist/seed.js && node dist/index.js
+    buildCommand: npm install && ./node_modules/.bin/prisma generate && npm run build
+    startCommand: ./node_modules/.bin/prisma migrate deploy && node dist/seed.js && node dist/index.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
