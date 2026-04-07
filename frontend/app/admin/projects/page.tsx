@@ -22,7 +22,7 @@ export default function ProjectsAdmin() {
 
   const openCreate = () => { setForm(empty); setModal('create'); };
   const openEdit = (p: Project) => {
-    setForm({ ...p, tags: p.tags.join(', ') });
+    setForm({ ...p, tags: p.tags.join(', '), projectUrl: p.projectUrl ?? '', githubUrl: p.githubUrl ?? '', imageUrl: p.imageUrl ?? '' });
     setEditId(p.id);
     setModal('edit');
   };
