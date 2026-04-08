@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { api } from '@/lib/api';
 import type { Profile, Project, Experience, Skill, Testimonial } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
-import { Mail, Phone, MapPin, ExternalLink, Download, ChevronDown, Star, Menu, X } from 'lucide-react';
+import { Mail, Phone, MapPin, ExternalLink, Download, ChevronDown, Star, Menu, X, CheckCircle } from 'lucide-react';
 import { GithubIcon, LinkedinIcon, TwitterIcon } from '@/components/icons';
 
 export default function Portfolio() {
@@ -17,6 +18,7 @@ export default function Portfolio() {
   const [contactForm, setContactForm] = useState({ name: '', email: '', subject: '', content: '' });
   const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [activeSection, setActiveSection] = useState('hero');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -51,6 +53,7 @@ export default function Portfolio() {
       await api.sendMessage(contactForm);
       setContactStatus('sent');
       setContactForm({ name: '', email: '', subject: '', content: '' });
+      setShowSuccessModal(true);
     } catch { setContactStatus('error'); }
   };
 
@@ -70,8 +73,39 @@ export default function Portfolio() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className="bg-white rounded-3xl shadow-2xl p-10 max-w-sm w-full text-center"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.15, type: 'spring', stiffness: 400, damping: 20 }}
+              className="flex justify-center mb-5"
+            >
+              <CheckCircle size={64} className="text-green-500" strokeWidth={1.5} />
+            </motion.div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">訊息已送出！</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">
+              您的信息已收到，請等待回覆。<br />我會盡快與您聯繫！
+            </p>
+            <button
+              onClick={() => { setShowSuccessModal(false); setContactStatus('idle'); }}
+              className="w-full py-3 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition-colors"
+            >
+              好的，謝謝！
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="#hero" className="font-semibold text-gray-900 text-lg">{profile?.name || 'Portfolio'}</a>
           <div className="hidden md:flex items-center gap-6">
@@ -172,14 +206,9 @@ export default function Portfolio() {
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">{cat}</h3>
                 <div className="grid sm:grid-cols-2 gap-5">
                   {catSkills.map(skill => (
-                    <div key={skill.id}>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">{skill.name}</span>
-                        <span className="text-xs text-gray-400">{skill.level}%</span>
-                      </div>
-                      <div className="h-1 bg-gray-200 rounded-full">
-                        <div className="h-full bg-gray-600 rounded-full" style={{ width: `${skill.level}%` }} />
-                      </div>
+                    <div key={skill.id} className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">{skill.name}</span>
+                      <StarRating value={skill.level} max={7} />
                     </div>
                   ))}
                 </div>
@@ -189,34 +218,55 @@ export default function Portfolio() {
         </div>
       </section>
 
-      {/* Experience */}
+      {/* Experience — framer-motion timeline */}
       <section id="experience" className="py-24 bg-white">
         <div className="max-w-5xl mx-auto px-6">
           <SectionHeader title="工作經歷" subtitle="職涯發展歷程" />
-          <div className="relative pl-6 border-l border-gray-200 space-y-8">
-            {experiences.map((exp, idx) => (
-              <div key={exp.id} className="relative">
-                <div className={`absolute -left-[29px] top-1.5 w-5 h-5 rounded-full border-2 flex items-center justify-center
-                  ${idx === 0 ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-300'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${idx === 0 ? 'bg-white' : 'bg-gray-300'}`} />
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-colors">
-                  <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{exp.role}</h3>
-                      <p className="text-gray-500 text-sm mt-0.5">{exp.company}</p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap justify-end">
-                      <span className="text-xs text-gray-400">
-                        {formatDate(exp.startDate)} — {exp.current ? '現在' : formatDate(exp.endDate || '')}
-                      </span>
-                      {exp.current && <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">目前職位</span>}
+          <div className="relative">
+            {/* Vertical line */}
+            <div className="absolute left-[19px] top-3 bottom-3 w-px bg-gray-200" />
+            <div className="space-y-8">
+              {experiences.map((exp, idx) => (
+                <motion.div
+                  key={exp.id}
+                  initial={{ opacity: 0, x: -24 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{ duration: 0.45, delay: idx * 0.1, ease: 'easeOut' }}
+                  className="flex gap-6"
+                >
+                  {/* Dot */}
+                  <div className="relative flex-shrink-0 mt-1.5">
+                    <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 relative
+                      ${idx === 0 ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-300'}`}>
+                      {exp.imageUrl ? (
+                        <img src={exp.imageUrl} alt={exp.company} className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        <span className={`text-xs font-bold ${idx === 0 ? 'text-white' : 'text-gray-400'}`}>
+                          {exp.company[0]}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <p className="text-gray-500 text-sm leading-relaxed">{exp.description}</p>
-                </div>
-              </div>
-            ))}
+                  {/* Content */}
+                  <div className="flex-1 bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-colors">
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{exp.role}</h3>
+                        <p className="text-gray-500 text-sm mt-0.5">{exp.company}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <span className="text-xs text-gray-400">
+                          {formatDate(exp.startDate)} — {exp.current ? '現在' : formatDate(exp.endDate || '')}
+                        </span>
+                        {exp.current && <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">目前職位</span>}
+                      </div>
+                    </div>
+                    <p className="text-gray-500 text-sm leading-relaxed">{exp.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -268,13 +318,18 @@ export default function Portfolio() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials — hover float */}
       <section id="testimonials" className="py-24 bg-white">
         <div className="max-w-5xl mx-auto px-6">
           <SectionHeader title="推薦人" subtitle="合作夥伴的評語" />
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.filter(t => t.featured).map(t => (
-              <div key={t.id} className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex flex-col">
+              <motion.div
+                key={t.id}
+                whileHover={{ y: -6, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.15)' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex flex-col cursor-default"
+              >
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: t.rating }).map((_, i) => (
                     <Star key={i} size={12} className="fill-gray-400 text-gray-400" />
@@ -292,7 +347,7 @@ export default function Portfolio() {
                     <div className="text-gray-400 text-xs">{t.role} · {t.company}</div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -363,7 +418,7 @@ export default function Portfolio() {
               </div>
               <button type="submit" disabled={contactStatus === 'sending'}
                 className="w-full py-3 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors">
-                {contactStatus === 'sending' ? '傳送中...' : contactStatus === 'sent' ? '✓ 訊息已傳送' : '傳送訊息'}
+                {contactStatus === 'sending' ? '傳送中...' : '傳送訊息'}
               </button>
               {contactStatus === 'error' && <p className="text-red-400 text-xs text-center">傳送失敗，請稍後再試</p>}
             </form>
@@ -381,6 +436,22 @@ export default function Portfolio() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+/** 7-star rating display */
+function StarRating({ value, max = 7 }: { value: number; max?: number }) {
+  const stars = Math.min(Math.max(Math.round(value), 0), max);
+  return (
+    <div className="flex gap-0.5">
+      {Array.from({ length: max }).map((_, i) => (
+        <Star
+          key={i}
+          size={13}
+          className={i < stars ? 'fill-gray-600 text-gray-600' : 'fill-gray-200 text-gray-200'}
+        />
+      ))}
     </div>
   );
 }

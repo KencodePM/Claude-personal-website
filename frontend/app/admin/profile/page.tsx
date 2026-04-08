@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { getToken, api } from '@/lib/api';
 import { Save, Upload } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = '';
 
 export default function ProfileAdmin() {
   const [form, setForm] = useState({
@@ -46,7 +46,7 @@ export default function ProfileAdmin() {
         body: fd,
       });
       const data = await res.json();
-      setForm(p => ({ ...p, [field]: `${API_URL}${data.url}` }));
+      setForm(p => ({ ...p, [field]: data.url }));
     } catch { alert('上傳失敗'); }
     finally { setUploading(false); }
   };

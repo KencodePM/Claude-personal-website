@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react';
 import { getToken, api } from '@/lib/api';
 import type { Project } from '@/lib/types';
-import { Plus, Pencil, Trash2, X, Save, ExternalLink, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, ExternalLink, Star, Upload } from 'lucide-react';
 import { GithubIcon } from '@/components/icons';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const empty = { title: '', description: '', tags: '', projectUrl: '', githubUrl: '', imageUrl: '', featured: false };
 
 export default function ProjectsAdmin() {
@@ -52,6 +51,20 @@ export default function ProjectsAdmin() {
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const token = getToken();
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setForm(p => ({ ...p, imageUrl: data.url }));
+    } catch { alert('上傳失敗'); }
+  };
 
   return (
     <div className="max-w-4xl">
@@ -124,7 +137,20 @@ export default function ProjectsAdmin() {
             <Field label="技術標籤 (逗號分隔)" value={form.tags} onChange={set('tags')} placeholder="React, Node.js, PostgreSQL" />
             <Field label="專案連結" value={form.projectUrl} onChange={set('projectUrl')} placeholder="https://..." />
             <Field label="GitHub 連結" value={form.githubUrl} onChange={set('githubUrl')} placeholder="https://github.com/..." />
-            <Field label="圖片 URL" value={form.imageUrl} onChange={set('imageUrl')} placeholder="https://..." />
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">專案圖片</label>
+              <div className="flex gap-2">
+                <input type="text" value={form.imageUrl} onChange={set('imageUrl')} placeholder="https://..."
+                  className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors" />
+                <label className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-100 cursor-pointer flex items-center gap-1.5 transition-colors whitespace-nowrap">
+                  <Upload size={12} /> 上傳
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                </label>
+              </div>
+              {form.imageUrl && (
+                <img src={form.imageUrl} alt="" className="mt-2 h-20 rounded-lg object-cover border border-gray-200" />
+              )}
+            </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.featured} onChange={e => setForm(p => ({ ...p, featured: e.target.checked }))}
                 className="w-4 h-4 rounded border-gray-300 accent-gray-900" />

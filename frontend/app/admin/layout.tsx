@@ -6,12 +6,13 @@ import Link from 'next/link';
 import { getToken, removeToken, api } from '@/lib/api';
 import {
   LayoutDashboard, User, Briefcase, FolderOpen, MessageSquare,
-  Star, LogOut, Menu, X, Zap, Settings
+  Star, LogOut, Menu, X, Zap, Sparkles
 } from 'lucide-react';
 
 const navItems = [
   { href: '/admin', label: '總覽', icon: LayoutDashboard },
   { href: '/admin/profile', label: '個人資料', icon: User },
+  { href: '/admin/skills', label: '技術能力', icon: Sparkles },
   { href: '/admin/experience', label: '工作經歷', icon: Briefcase },
   { href: '/admin/projects', label: '作品集', icon: FolderOpen },
   { href: '/admin/testimonials', label: '推薦人', icon: Star },

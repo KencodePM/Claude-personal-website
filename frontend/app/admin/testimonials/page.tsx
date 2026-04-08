@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getToken, api } from '@/lib/api';
 import type { Testimonial } from '@/lib/types';
-import { Plus, Pencil, Trash2, X, Save, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, Star, Upload } from 'lucide-react';
 
 const empty = { name: '', role: '', company: '', content: '', avatar: '', rating: 5, featured: true };
 
@@ -45,6 +45,20 @@ export default function TestimonialsAdmin() {
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((p: any) => ({ ...p, [k]: e.target.value }));
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const token = getToken();
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setForm((p: any) => ({ ...p, avatar: data.url }));
+    } catch { alert('上傳失敗'); }
+  };
 
   return (
     <div className="max-w-4xl">
@@ -103,7 +117,17 @@ export default function TestimonialsAdmin() {
               <Field label="姓名 *" value={form.name} onChange={set('name')} required />
               <Field label="職稱 *" value={form.role} onChange={set('role')} required />
               <Field label="公司 *" value={form.company} onChange={set('company')} required />
-              <Field label="頭像 URL" value={form.avatar} onChange={set('avatar')} placeholder="https://..." />
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">頭像</label>
+                <div className="flex gap-2">
+                  <input type="text" value={form.avatar} onChange={set('avatar')} placeholder="https://..."
+                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors" />
+                  <label className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-100 cursor-pointer flex items-center gap-1.5 transition-colors whitespace-nowrap">
+                    <Upload size={12} /> 上傳
+                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                  </label>
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">評語 *</label>

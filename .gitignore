@@ -61,3 +61,4 @@ prisma/*.db
 
 # Claude Code local config (contains machine-specific paths)
 .claude/
+.env*.local

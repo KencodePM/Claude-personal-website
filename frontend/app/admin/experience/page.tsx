@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { getToken, api } from '@/lib/api';
 import type { Experience } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
-import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, Upload } from 'lucide-react';
 
-const empty = { company: '', role: '', startDate: '', endDate: '', current: false, description: '' };
+const empty = { company: '', role: '', startDate: '', endDate: '', current: false, description: '', imageUrl: '' };
 
 export default function ExperienceAdmin() {
   const [items, setItems] = useState<Experience[]>([]);
@@ -46,6 +46,20 @@ export default function ExperienceAdmin() {
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((p: any) => ({ ...p, [k]: e.target.value }));
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const token = getToken();
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setForm((p: any) => ({ ...p, imageUrl: data.url }));
+    } catch { alert('上傳失敗'); }
+  };
 
   return (
     <div className="max-w-3xl">
@@ -108,6 +122,20 @@ export default function ExperienceAdmin() {
                 className="w-4 h-4 rounded border-gray-300 accent-gray-900" />
               <span className="text-sm text-gray-600">目前在職</span>
             </label>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">公司 Logo / 圖片</label>
+              <div className="flex gap-2">
+                <input type="text" value={form.imageUrl || ''} onChange={set('imageUrl')} placeholder="https://..."
+                  className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors" />
+                <label className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-100 cursor-pointer flex items-center gap-1.5 transition-colors whitespace-nowrap">
+                  <Upload size={12} /> 上傳
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                </label>
+              </div>
+              {form.imageUrl && (
+                <img src={form.imageUrl} alt="" className="mt-2 w-10 h-10 rounded-full object-cover border border-gray-200" />
+              )}
+            </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">工作描述 *</label>
               <textarea required rows={4} value={form.description} onChange={set('description')}

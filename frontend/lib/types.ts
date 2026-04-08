@@ -30,6 +30,7 @@ export interface Experience {
   endDate?: string;
   current: boolean;
   description: string;
+  imageUrl?: string;
   order: number;
 }
 

@@ -116,10 +116,19 @@ export default function MessagesAdmin() {
                   <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{selected.content}</p>
                 </div>
                 <div className="p-4 border-t border-gray-100">
-                  <a href={`mailto:${selected.email}?subject=Re: ${selected.subject || ''}`}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm hover:bg-gray-700 transition-colors">
-                    <Mail size={14} /> 回覆郵件
-                  </a>
+                  <button
+                    onClick={() => {
+                      const subject = encodeURIComponent(`Re: ${selected.subject || '您的訊息'}`);
+                      const body = encodeURIComponent(
+                        `親愛的 ${selected.name}，\n\n感謝您的來信！\n\n` +
+                        `---\n原始訊息：\n${selected.content}`
+                      );
+                      window.open(`mailto:${selected.email}?subject=${subject}&body=${body}`, '_blank');
+                    }}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm hover:bg-gray-700 transition-colors"
+                  >
+                    <Mail size={14} /> 開啟郵件回覆
+                  </button>
                 </div>
               </>
             ) : (
