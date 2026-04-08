@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Use relative URL so requests go through Next.js rewrites (avoids CORS).
+// The rewrite rule in next.config.ts proxies /api/* to the actual backend.
+const API_URL = '';
 
 async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
