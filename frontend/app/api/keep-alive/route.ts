@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+// Allow up to 60s for Render cold start
+export const maxDuration = 60;
+
 const BACKEND_URL = process.env.BACKEND_URL || 'https://portfolio-backend-2qry.onrender.com';
 
 export async function GET() {
