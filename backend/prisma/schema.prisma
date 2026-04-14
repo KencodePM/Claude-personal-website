@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,90 +10,200 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ProjectStatus {
+  PUBLISHED
+  DRAFT
+}
+
+enum TestimonialStatus {
+  PUBLISHED
+  DRAFT
+}
+
+enum MessageStatus {
+  UNREAD
+  READ
+  REPLIED
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+
+  @@map("users")
 }
 
 model Profile {
-  id          String   @id @default(uuid())
-  name        String
-  title       String
-  bio         String
-  email       String
-  phone       String?
-  location    String?
-  avatar      String?
-  resumeUrl   String?
-  githubUrl   String?
-  linkedinUrl String?
-  twitterUrl  String?
-  websiteUrl  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
+  id           String   @id @default(cuid())
+  nameCn       String
+  nameEn       String
+  title        String
+  location     String
+  email        String
+  phone        String?
+  bio          String
+  heroSubtitle String
+  linkedinUrl  String?
+  githubUrl    String?
+  resumeUrl    String?
+  stat1Num     String
+  stat1Label   String
+  stat2Num     String
+  stat2Label   String
+  stat3Num     String
+  stat3Label   String
+  updatedAt    DateTime @updatedAt
 
-model Skill {
-  id        String   @id @default(uuid())
-  name      String
-  level     Int      @default(80)
-  category  String   @default("General")
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Experience {
-  id          String   @id @default(uuid())
-  company     String
-  role        String
-  startDate   String
-  endDate     String?
-  current     Boolean  @default(false)
-  description String
-  imageUrl    String?
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  @@map("profiles")
 }
 
 model Project {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  tags        String   @default("[]")
-  imageUrl    String?
-  projectUrl  String?
-  githubUrl   String?
-  featured    Boolean  @default(false)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String        @id @default(cuid())
+  title         String
+  category      String
+  briefDesc     String
+  caseStudyBody String
+  tags          String[]
+  impact        String
+  year          Int
+  imageUrl      String?
+  status        ProjectStatus @default(DRAFT)
+  sortOrder     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("projects")
 }
 
 model Testimonial {
-  id        String   @id @default(uuid())
-  name      String
-  role      String
+  id          String            @id @default(cuid())
+  name        String
+  role        String
+  company     String
+  linkedinUrl String?
+  quote       String
+  status      TestimonialStatus @default(DRAFT)
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now())
+
+  @@map("testimonials")
+}
+
+model Experience {
+  id        String    @id @default(cuid())
+  jobTitle  String
   company   String
-  content   String
-  avatar    String?
-  rating    Int      @default(5)
-  featured  Boolean  @default(true)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  startDate DateTime
+  endDate   DateTime?
+  isCurrent Boolean   @default(false)
+  bullets   String[]
+  sortOrder Int       @default(0)
+
+  @@map("experiences")
+}
+
+model Skill {
+  id        String @id @default(cuid())
+  category  String
+  name      String
+  sortOrder Int    @default(0)
+
+  @@map("skills")
+}
+
+model SkillCategory {
+  id        String @id @default(cuid())
+  name      String @unique
+  sortOrder Int    @default(0)
+
+  @@map("skill_categories")
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  name      String
-  email     String
-  subject   String?
-  content   String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id         String        @id @default(cuid())
+  senderName String
+  email      String
+  subject    String
+  body       String
+  status     MessageStatus @default(UNREAD)
+  createdAt  DateTime      @default(now())
+
+  @@map("messages")
+}
+
+model SiteSettings {
+  id              String   @id @default(cuid())
+  metaTitle       String
+  metaDesc        String
+  ogImageUrl      String?
+  gaId            String?
+  notifyEmail     String?
+  notifyOnMessage Boolean  @default(true)
+
+  @@map("site_settings")
+}
+
+// ─── Multi-user portfolio ─────────────────────────────────────────────────────
+
+enum SectionType {
+  HERO
+  ABOUT
+  EXPERIENCE
+  PROJECTS
+  SKILLS
+  EDUCATION
+  CONTACT
+}
+
+model InviteCode {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  createdAt     DateTime       @default(now())
+  usedAt        DateTime?
+  portfolioUser PortfolioUser?
+
+  @@map("invite_codes")
+}
+
+model PortfolioUser {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  username     String      @unique
+  displayName  String
+  inviteCode   InviteCode  @relation(fields: [inviteCodeId], references: [id])
+  inviteCodeId String      @unique
+  portfolio    Portfolio?
+  createdAt    DateTime    @default(now())
+
+  @@map("portfolio_users")
+}
+
+model Portfolio {
+  id             String             @id @default(cuid())
+  user           PortfolioUser      @relation(fields: [userId], references: [id])
+  userId         String             @unique
+  isPublished    Boolean            @default(false)
+  seoTitle       String?
+  seoDescription String?
+  ogImageUrl     String?
+  sections       PortfolioSection[]
+  updatedAt      DateTime           @updatedAt
+
+  @@map("portfolios")
+}
+
+model PortfolioSection {
+  id          String      @id @default(cuid())
+  portfolio   Portfolio   @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  portfolioId String
+  type        SectionType
+  order       Int
+  isVisible   Boolean     @default(true)
+  data        Json        @default("{}")
+
+  @@map("portfolio_sections")
 }

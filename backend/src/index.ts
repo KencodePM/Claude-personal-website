@@ -1,59 +1,58 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import path from 'path';
-
-dotenv.config();
-
-import authRoutes from './routes/auth';
-import profileRoutes from './routes/profile';
-import projectRoutes from './routes/projects';
-import testimonialRoutes from './routes/testimonials';
-import experienceRoutes from './routes/experience';
-import skillRoutes from './routes/skills';
-import messageRoutes from './routes/messages';
-import uploadRoutes from './routes/upload';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { env } from './config/env';
+import { errorHandler, notFound } from './middleware/errorHandler';
+import authRouter from './routes/auth';
+import profileRouter from './routes/profile';
+import projectsRouter from './routes/projects';
+import testimonialsRouter from './routes/testimonials';
+import experienceRouter from './routes/experience';
+import skillsRouter from './routes/skills';
+import messagesRouter from './routes/messages';
+import userAuthRouter from './routes/userAuth';
+import userPortfolioRouter from './routes/userPortfolio';
+import publicPortfolioRouter from './routes/publicPortfolio';
+import adminUsersRouter from './routes/adminUsers';
 
 const app = express();
-const PORT = process.env.PORT || 4000;
 
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
-  .split(',')
-  .map(o => o.trim());
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.some(o => origin === o || origin.endsWith('.vercel.app'))) {
-      return callback(null, true);
-    }
-    callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
-}));
+app.use(helmet());
+app.use(
+  cors({
+    origin: env.FRONTEND_URL.split(',').map((o) => o.trim()),
+    credentials: true,
+  })
+);
+app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/testimonials', testimonialRoutes);
-app.use('/api/experience', experienceRoutes);
-app.use('/api/skills', skillRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/upload', uploadRoutes);
-
+// Health check
 app.get('/api/health', (_, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running on http://localhost:${PORT}`);
+// Existing admin routes
+app.use('/api/auth', authRouter);
+app.use('/api/profile', profileRouter);
+app.use('/api/projects', projectsRouter);
+app.use('/api/testimonials', testimonialsRouter);
+app.use('/api/experience', experienceRouter);
+app.use('/api/skills', skillsRouter);
+app.use('/api/messages', messagesRouter);
+
+// Multi-user portfolio routes
+app.use('/api/auth/user', userAuthRouter);
+app.use('/api/user', userPortfolioRouter);
+app.use('/api/portfolio', publicPortfolioRouter);
+app.use('/api/admin', adminUsersRouter);
+
+app.use(notFound);
+app.use(errorHandler);
+
+app.listen(env.PORT, () => {
+  console.log(`🚀 Server running on port ${env.PORT}`);
 });
 
 export default app;
