@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { requireUserAuth } from '../middleware/userAuth';
 import { createError } from '../middleware/errorHandler';
@@ -115,7 +116,7 @@ router.put('/portfolio/sections', async (req: Request, res: Response, next: Next
           type: s.type,
           order: s.order,
           isVisible: s.isVisible,
-          data: s.data,
+          data: s.data as Prisma.InputJsonObject,
         })),
       });
       return tx.portfolio.findUnique({
