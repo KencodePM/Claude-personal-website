@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import prisma from '../lib/prisma';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Public: Get profile
 router.get('/', async (_req: Request, res: Response): Promise<void> => {
@@ -15,7 +14,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
 });
 
 // Admin: Update profile
-router.put('/', authenticate, async (req: Request, res: Response): Promise<void> => {
+router.put('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const existing = await prisma.profile.findFirst();
     const data = req.body;
