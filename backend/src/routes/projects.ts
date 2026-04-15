@@ -1,55 +1,187 @@
-import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { Router, Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { ProjectStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
+import { requireAuth } from '../middleware/auth';
+import { createError } from '../middleware/errorHandler';
 
 const router = Router();
-const prisma = new PrismaClient();
 
-// Public: List projects
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const projects = await prisma.project.findMany({ orderBy: [{ featured: 'desc' }, { order: 'asc' }, { createdAt: 'desc' }] });
-    const parsed = projects.map(p => ({ ...p, tags: JSON.parse(p.tags || '[]') }));
-    res.json(parsed);
-  } catch { res.status(500).json({ error: 'Server error' }); }
+const projectSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  category: z.string().min(1, 'Category is required'),
+  briefDesc: z.string().min(1, 'Brief description is required'),
+  caseStudyBody: z.string().min(1, 'Case study body is required'),
+  tags: z.array(z.string()).default([]),
+  impact: z.string().min(1, 'Impact is required'),
+  year: z.number().int().min(2000).max(2100),
+  imageUrl: z.string().optional().nullable(),
+  status: z.nativeEnum(ProjectStatus).default(ProjectStatus.DRAFT),
+  sortOrder: z.number().int().default(0),
 });
 
-// Public: Get single project
-router.get('/:id', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const project = await prisma.project.findUnique({ where: { id: req.params.id } });
-    if (!project) { res.status(404).json({ error: 'Not found' }); return; }
-    res.json({ ...project, tags: JSON.parse(project.tags || '[]') });
-  } catch { res.status(500).json({ error: 'Server error' }); }
+const projectUpdateSchema = projectSchema.partial();
+
+const paginationSchema = z.object({
+  page: z.string().default('1').transform(Number),
+  limit: z.string().default('10').transform(Number),
+  status: z.nativeEnum(ProjectStatus).optional(),
 });
 
-// Admin: Create project
-router.post('/', authenticate, async (req: Request, res: Response): Promise<void> => {
+// GET /api/projects (public: PUBLISHED only; admin: all)
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { tags, ...rest } = req.body;
-    const project = await prisma.project.create({ data: { ...rest, tags: JSON.stringify(tags || []) } });
-    res.status(201).json({ ...project, tags: JSON.parse(project.tags) });
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+    const { page, limit, status } = paginationSchema.parse(req.query);
+    const skip = (page - 1) * limit;
+
+    let isAuthenticated = false;
+    if (req.headers.authorization) {
+      try {
+        const jwt = await import('jsonwebtoken');
+        const { env } = await import('../config/env');
+        const token = req.headers.authorization.split(' ')[1];
+        if (token) {
+          jwt.default.verify(token, env.JWT_SECRET);
+          isAuthenticated = true;
+        }
+      } catch {
+        isAuthenticated = false;
+      }
+    }
+
+    const where = isAuthenticated
+      ? status ? { status } : {}
+      : { status: ProjectStatus.PUBLISHED };
+
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        where,
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+        skip,
+        take: limit,
+      }),
+      prisma.project.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        projects,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Admin: Update project
-router.put('/:id', authenticate, async (req: Request, res: Response): Promise<void> => {
+// GET /api/projects/:id (public)
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { tags, ...rest } = req.body;
+    const project = await prisma.project.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!project) {
+      throw createError('Project not found', 404);
+    }
+
+    let isAuthenticated = false;
+    if (req.headers.authorization) {
+      try {
+        const jwt = await import('jsonwebtoken');
+        const { env } = await import('../config/env');
+        const token = req.headers.authorization.split(' ')[1];
+        if (token) {
+          jwt.default.verify(token, env.JWT_SECRET);
+          isAuthenticated = true;
+        }
+      } catch {
+        isAuthenticated = false;
+      }
+    }
+
+    if (!isAuthenticated && project.status !== ProjectStatus.PUBLISHED) {
+      throw createError('Project not found', 404);
+    }
+
+    res.json({ success: true, data: project });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/projects (admin)
+router.post('/', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = projectSchema.parse(req.body);
+    const project = await prisma.project.create({ data });
+    res.status(201).json({ success: true, data: project });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/projects/:id (admin)
+router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = projectUpdateSchema.parse(req.body);
+
+    const existing = await prisma.project.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      throw createError('Project not found', 404);
+    }
+
     const project = await prisma.project.update({
       where: { id: req.params.id },
-      data: { ...rest, ...(tags !== undefined ? { tags: JSON.stringify(tags) } : {}) }
+      data,
     });
-    res.json({ ...project, tags: JSON.parse(project.tags) });
-  } catch { res.status(500).json({ error: 'Server error' }); }
+
+    res.json({ success: true, data: project });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Admin: Delete project
-router.delete('/:id', authenticate, async (req: Request, res: Response): Promise<void> => {
+// PATCH /api/projects/:id/status (admin)
+router.patch('/:id/status', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { status } = z.object({ status: z.nativeEnum(ProjectStatus) }).parse(req.body);
+
+    const existing = await prisma.project.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      throw createError('Project not found', 404);
+    }
+
+    const project = await prisma.project.update({
+      where: { id: req.params.id },
+      data: { status },
+    });
+
+    res.json({ success: true, data: project });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/projects/:id (admin)
+router.delete('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const existing = await prisma.project.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      throw createError('Project not found', 404);
+    }
+
     await prisma.project.delete({ where: { id: req.params.id } });
-    res.json({ message: 'Deleted' });
-  } catch { res.status(500).json({ error: 'Server error' }); }
+    res.json({ success: true, data: { message: 'Project deleted successfully' } });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

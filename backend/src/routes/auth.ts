@@ -1,61 +1,77 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { z } from 'zod';
+import prisma from '../lib/prisma';
+import { env } from '../config/env';
+import { requireAuth } from '../middleware/auth';
+import { createError } from '../middleware/errorHandler';
 
 const router = Router();
-const prisma = new PrismaClient();
 
-// Login
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    res.status(400).json({ error: 'Email and password required' });
-    return;
-  }
+const loginSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+// POST /api/auth/login
+router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { email, password } = loginSchema.parse(req.body);
+
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+      throw createError('Invalid email or password', 401);
     }
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      throw createError('Invalid email or password', 401);
     }
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-    res.json({ token, user: { id: user.id, email: user.email } });
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      env.JWT_SECRET,
+      { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
+    );
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      },
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    next(err);
   }
 });
 
-// Get current user
-router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { id: true, email: true, createdAt: true } });
-    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-    res.json(user);
-  } catch {
-    res.status(500).json({ error: 'Server error' });
-  }
+// POST /api/auth/logout
+router.post('/logout', requireAuth, (req: Request, res: Response) => {
+  // JWT is stateless; client should discard the token
+  res.json({ success: true, data: { message: 'Logged out successfully' } });
 });
 
-// Change password
-router.put('/password', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
-  const { currentPassword, newPassword } = req.body;
+// GET /api/auth/me
+router.get('/me', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId } });
-    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-    const valid = await bcrypt.compare(currentPassword, user.password);
-    if (!valid) { res.status(401).json({ error: 'Current password incorrect' }); return; }
-    const hash = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({ where: { id: req.userId }, data: { password: hash } });
-    res.json({ message: 'Password updated' });
-  } catch {
-    res.status(500).json({ error: 'Server error' });
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { id: true, email: true, name: true, createdAt: true },
+    });
+
+    if (!user) {
+      throw createError('User not found', 404);
+    }
+
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
   }
 });
 
