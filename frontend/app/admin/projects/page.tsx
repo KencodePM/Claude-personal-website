@@ -3,15 +3,14 @@
 import { useEffect, useState } from 'react';
 import { getToken, api } from '@/lib/api';
 import type { Project } from '@/lib/types';
-import { Plus, Pencil, Trash2, X, Save, ExternalLink, Star, Upload } from 'lucide-react';
-import { GithubIcon } from '@/components/icons';
+import { Plus, Pencil, Trash2, X, Save, Upload } from 'lucide-react';
 
-const empty = { title: '', description: '', tags: '', projectUrl: '', githubUrl: '', imageUrl: '', featured: false };
+const emptyForm = { title: '', category: '', briefDesc: '', tags: '', imageUrl: '', impact: '', year: new Date().getFullYear(), status: 'DRAFT' as 'PUBLISHED' | 'DRAFT' };
 
 export default function ProjectsAdmin() {
   const [items, setItems] = useState<Project[]>([]);
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
-  const [form, setForm] = useState(empty);
+  const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -19,9 +18,9 @@ export default function ProjectsAdmin() {
   const load = () => api.getProjects().then(d => { setItems(d.projects ?? []); setLoading(false); }).catch(() => setLoading(false));
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setForm(empty); setModal('create'); };
+  const openCreate = () => { setForm(emptyForm); setModal('create'); };
   const openEdit = (p: Project) => {
-    setForm({ ...p, tags: p.tags.join(', '), projectUrl: p.projectUrl ?? '', githubUrl: p.githubUrl ?? '', imageUrl: p.imageUrl ?? '' });
+    setForm({ title: p.title, category: p.category, briefDesc: p.briefDesc, tags: p.tags.join(', '), imageUrl: p.imageUrl ?? '', impact: p.impact ?? '', year: p.year, status: p.status });
     setEditId(p.id);
     setModal('edit');
   };
@@ -30,7 +29,8 @@ export default function ProjectsAdmin() {
     e.preventDefault();
     setSaving(true);
     const token = getToken()!;
-    const payload = { ...form, tags: form.tags.split(',').map(t => t.trim()).filter(Boolean) };
+    const { tags, year, ...rest } = form;
+    const payload = { ...rest, tags: tags.split(',').map(t => t.trim()).filter(Boolean), year: Number(year) };
     try {
       if (modal === 'create') {
         await api.adminFetch('/api/projects', token, { method: 'POST', body: JSON.stringify(payload) });
@@ -49,7 +49,7 @@ export default function ProjectsAdmin() {
     setItems(p => p.filter(i => i.id !== id));
   };
 
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const set = (k: keyof typeof emptyForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,26 +91,16 @@ export default function ProjectsAdmin() {
               <div className="p-4">
                 <div className="flex items-start gap-2 mb-2">
                   <h3 className="font-semibold text-gray-900 text-sm flex-1">{item.title}</h3>
-                  {item.featured && <Star size={12} className="text-gray-400 fill-gray-400 shrink-0 mt-0.5" />}
+                  {item.status === 'PUBLISHED' && <span className="px-1.5 py-0.5 bg-green-50 text-green-600 text-xs rounded-full border border-green-100">已發布</span>}
                 </div>
-                <p className="text-gray-400 text-xs leading-relaxed mb-3 line-clamp-2">{item.description}</p>
+                <p className="text-gray-400 text-xs leading-relaxed mb-3 line-clamp-2">{item.briefDesc}</p>
                 <div className="flex flex-wrap gap-1 mb-3">
                   {item.tags.slice(0, 3).map(t => (
                     <span key={t} className="px-2 py-0.5 bg-gray-50 border border-gray-200 text-gray-400 text-xs rounded-full">{t}</span>
                   ))}
                 </div>
                 <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-                  {item.projectUrl && (
-                    <a href={item.projectUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-700 transition-colors">
-                      <ExternalLink size={13} />
-                    </a>
-                  )}
-                  {item.githubUrl && (
-                    <a href={item.githubUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-700 transition-colors">
-                      <GithubIcon size={13} />
-                    </a>
-                  )}
-                  <div className="flex-1" />
+                  <span className="text-xs text-gray-400 flex-1">{item.year}</span>
                   <button onClick={() => openEdit(item)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                     <Pencil size={13} />
                   </button>
@@ -124,19 +114,29 @@ export default function ProjectsAdmin() {
         </div>
       )}
 
-      {/* Modal */}
       {modal && (
         <Modal title={modal === 'create' ? '新增作品' : '編輯作品'} onClose={() => setModal(null)}>
           <form onSubmit={handleSave} className="space-y-4">
-            <Field label="標題 *" value={form.title} onChange={set('title')} required />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="標題 *" value={form.title} onChange={set('title')} required />
+              <Field label="分類 *" value={form.category} onChange={set('category')} required placeholder="Web App, Mobile..." />
+              <Field label="年份" value={String(form.year)} onChange={set('year')} placeholder="2024" />
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">狀態</label>
+                <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as 'PUBLISHED' | 'DRAFT' }))}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                  <option value="DRAFT">草稿</option>
+                  <option value="PUBLISHED">已發布</option>
+                </select>
+              </div>
+            </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">描述 *</label>
-              <textarea required rows={3} value={form.description} onChange={set('description')}
+              <label className="block text-xs text-gray-500 mb-1.5">簡短描述 *</label>
+              <textarea required rows={3} value={form.briefDesc} onChange={set('briefDesc')}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors resize-none" />
             </div>
             <Field label="技術標籤 (逗號分隔)" value={form.tags} onChange={set('tags')} placeholder="React, Node.js, PostgreSQL" />
-            <Field label="專案連結" value={form.projectUrl} onChange={set('projectUrl')} placeholder="https://..." />
-            <Field label="GitHub 連結" value={form.githubUrl} onChange={set('githubUrl')} placeholder="https://github.com/..." />
+            <Field label="成果/影響" value={form.impact} onChange={set('impact')} placeholder="提升效能 30%" />
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">專案圖片</label>
               <div className="flex gap-2">
@@ -151,11 +151,6 @@ export default function ProjectsAdmin() {
                 <img src={form.imageUrl} alt="" className="mt-2 h-20 rounded-lg object-cover border border-gray-200" />
               )}
             </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.featured} onChange={e => setForm(p => ({ ...p, featured: e.target.checked }))}
-                className="w-4 h-4 rounded border-gray-300 accent-gray-900" />
-              <span className="text-sm text-gray-600">設為精選作品</span>
-            </label>
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={saving}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors">

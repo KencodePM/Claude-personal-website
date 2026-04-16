@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { getToken, api } from '@/lib/api';
 import type { Testimonial } from '@/lib/types';
-import { Plus, Pencil, Trash2, X, Save, Star, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
 
-const empty = { name: '', role: '', company: '', content: '', avatar: '', rating: 5, featured: true };
+const emptyForm = { name: '', role: '', company: '', linkedinUrl: '', quote: '', status: 'DRAFT' as 'PUBLISHED' | 'DRAFT' };
 
 export default function TestimonialsAdmin() {
   const [items, setItems] = useState<Testimonial[]>([]);
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
-  const [form, setForm] = useState(empty as any);
+  const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -18,8 +18,12 @@ export default function TestimonialsAdmin() {
   const load = () => api.getTestimonials().then(d => { setItems(d); setLoading(false); }).catch(() => setLoading(false));
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setForm(empty); setModal('create'); };
-  const openEdit = (item: Testimonial) => { setForm(item); setEditId(item.id); setModal('edit'); };
+  const openCreate = () => { setForm(emptyForm); setModal('create'); };
+  const openEdit = (item: Testimonial) => {
+    setForm({ name: item.name, role: item.role, company: item.company, linkedinUrl: item.linkedinUrl || '', quote: item.quote, status: item.status });
+    setEditId(item.id);
+    setModal('edit');
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,22 +47,8 @@ export default function TestimonialsAdmin() {
     setItems(p => p.filter(i => i.id !== id));
   };
 
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm((p: any) => ({ ...p, [k]: e.target.value }));
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const token = getToken();
-    const fd = new FormData();
-    fd.append('file', file);
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      setForm((p: any) => ({ ...p, avatar: data.url }));
-    } catch { alert('上傳失敗'); }
-  };
+  const set = (k: keyof typeof emptyForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(p => ({ ...p, [k]: e.target.value }));
 
   return (
     <div className="max-w-4xl">
@@ -77,18 +67,13 @@ export default function TestimonialsAdmin() {
         <div className="grid sm:grid-cols-2 gap-4">
           {items.map(item => (
             <div key={item.id} className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-gray-300 transition-colors">
-              <div className="flex gap-0.5 mb-3">
-                {Array.from({ length: item.rating }).map((_, i) => (
-                  <Star key={i} size={12} className="fill-gray-400 text-gray-400" />
-                ))}
-              </div>
               <blockquote className="text-gray-500 text-sm leading-relaxed mb-4 line-clamp-3">
-                &ldquo;{item.content}&rdquo;
+                &ldquo;{item.quote}&rdquo;
               </blockquote>
               <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs font-medium overflow-hidden">
-                    {item.avatar ? <img src={item.avatar} alt="" className="w-full h-full object-cover" /> : item.name[0]}
+                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs font-medium">
+                    {item.name[0]}
                   </div>
                   <div>
                     <div className="text-sm font-medium text-gray-800">{item.name}</div>
@@ -96,7 +81,7 @@ export default function TestimonialsAdmin() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {item.featured && <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">精選</span>}
+                  {item.status === 'PUBLISHED' && <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">精選</span>}
                   <button onClick={() => openEdit(item)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                     <Pencil size={13} />
                   </button>
@@ -117,39 +102,21 @@ export default function TestimonialsAdmin() {
               <Field label="姓名 *" value={form.name} onChange={set('name')} required />
               <Field label="職稱 *" value={form.role} onChange={set('role')} required />
               <Field label="公司 *" value={form.company} onChange={set('company')} required />
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">頭像</label>
-                <div className="flex gap-2">
-                  <input type="text" value={form.avatar} onChange={set('avatar')} placeholder="https://..."
-                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors" />
-                  <label className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-100 cursor-pointer flex items-center gap-1.5 transition-colors whitespace-nowrap">
-                    <Upload size={12} /> 上傳
-                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                  </label>
-                </div>
-              </div>
+              <Field label="LinkedIn 連結" value={form.linkedinUrl} onChange={set('linkedinUrl')} placeholder="https://..." />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">評語 *</label>
-              <textarea required rows={4} value={form.content} onChange={set('content')}
+              <textarea required rows={4} value={form.quote} onChange={set('quote')}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors resize-none" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">評分 (1-5)</label>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map(n => (
-                  <button key={n} type="button" onClick={() => setForm((p: any) => ({ ...p, rating: n }))}
-                    className="p-1.5 transition-colors">
-                    <Star size={18} className={n <= form.rating ? 'fill-gray-600 text-gray-600' : 'text-gray-200'} />
-                  </button>
-                ))}
-              </div>
+              <label className="block text-xs text-gray-500 mb-1.5">狀態</label>
+              <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as 'PUBLISHED' | 'DRAFT' }))}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                <option value="DRAFT">草稿 (不顯示)</option>
+                <option value="PUBLISHED">已發布 (顯示於首頁)</option>
+              </select>
             </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.featured} onChange={e => setForm((p: any) => ({ ...p, featured: e.target.checked }))}
-                className="w-4 h-4 rounded border-gray-300 accent-gray-900" />
-              <span className="text-sm text-gray-600">顯示於首頁</span>
-            </label>
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={saving}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors">
@@ -165,7 +132,9 @@ export default function TestimonialsAdmin() {
   );
 }
 
-function Field({ label, value, onChange, required, placeholder }: any) {
+function Field({ label, value, onChange, required, placeholder }: {
+  label: string; value: string; onChange: (e: any) => void; required?: boolean; placeholder?: string;
+}) {
   return (
     <div>
       <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
@@ -175,7 +144,7 @@ function Field({ label, value, onChange, required, placeholder }: any) {
   );
 }
 
-function Modal({ title, onClose, children }: any) {
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">

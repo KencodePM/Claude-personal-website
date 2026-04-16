@@ -22,7 +22,7 @@ export const api = {
   getSkills: () => fetchAPI<any[]>('/api/skills'),
   getTestimonials: () => fetchAPI<any[]>('/api/testimonials'),
   sendMessage: (data: object) =>
-    fetchAPI<any>('/api/messages', { method: 'POST', body: JSON.stringify(data) }),
+    fetchAPI<any>('/api/messages/contact', { method: 'POST', body: JSON.stringify(data) }),
 
   // Admin auth
   login: (email: string, password: string) =>

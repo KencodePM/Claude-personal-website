@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { api } from '@/lib/api';
 import type { Profile, Project, Experience, Skill, Testimonial } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
-import { Mail, Phone, MapPin, ExternalLink, Download, ChevronDown, Star, Menu, X, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Download, ChevronDown, Menu, X, CheckCircle } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '@/components/icons';
 
 export default function Portfolio() {
@@ -15,7 +15,7 @@ export default function Portfolio() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', subject: '', content: '' });
+  const [contactForm, setContactForm] = useState({ senderName: '', email: '', subject: '', body: '' });
   const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [activeSection, setActiveSection] = useState('hero');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -52,7 +52,7 @@ export default function Portfolio() {
     try {
       await api.sendMessage(contactForm);
       setContactStatus('sent');
-      setContactForm({ name: '', email: '', subject: '', content: '' });
+      setContactForm({ senderName: '', email: '', subject: '', body: '' });
       setShowSuccessModal(true);
     } catch { setContactStatus('error'); }
   };
@@ -199,12 +199,11 @@ export default function Portfolio() {
             {Object.entries(skillsByCategory).map(([cat, catSkills]) => (
               <div key={cat}>
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">{cat}</h3>
-                <div className="grid sm:grid-cols-2 gap-5">
+                <div className="flex flex-wrap gap-2">
                   {catSkills.map(skill => (
-                    <div key={skill.id} className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">{skill.name}</span>
-                      <StarRating value={skill.level} max={7} />
-                    </div>
+                    <span key={skill.id} className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-gray-700">
+                      {skill.name}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -234,30 +233,32 @@ export default function Portfolio() {
                   <div className="relative flex-shrink-0 mt-1.5">
                     <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 relative
                       ${idx === 0 ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-300'}`}>
-                      {exp.imageUrl ? (
-                        <img src={exp.imageUrl} alt={exp.company} className="w-full h-full object-cover rounded-full" />
-                      ) : (
-                        <span className={`text-xs font-bold ${idx === 0 ? 'text-white' : 'text-gray-400'}`}>
-                          {exp.company[0]}
-                        </span>
-                      )}
+                      <span className={`text-xs font-bold ${idx === 0 ? 'text-white' : 'text-gray-400'}`}>
+                        {exp.company[0]}
+                      </span>
                     </div>
                   </div>
                   {/* Content */}
                   <div className="flex-1 bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-colors">
                     <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                       <div>
-                        <h3 className="font-semibold text-gray-900">{exp.role}</h3>
+                        <h3 className="font-semibold text-gray-900">{exp.jobTitle}</h3>
                         <p className="text-gray-500 text-sm mt-0.5">{exp.company}</p>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap justify-end">
                         <span className="text-xs text-gray-400">
-                          {formatDate(exp.startDate)} — {exp.current ? '現在' : formatDate(exp.endDate || '')}
+                          {formatDate(exp.startDate)} — {exp.isCurrent ? '現在' : formatDate(exp.endDate || '')}
                         </span>
-                        {exp.current && <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">目前職位</span>}
+                        {exp.isCurrent && <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">目前職位</span>}
                       </div>
                     </div>
-                    <p className="text-gray-500 text-sm leading-relaxed">{exp.description}</p>
+                    {exp.bullets && exp.bullets.length > 0 && (
+                      <ul className="list-disc list-inside space-y-1">
+                        {exp.bullets.map((b, i) => (
+                          <li key={i} className="text-gray-500 text-sm leading-relaxed">{b}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -281,29 +282,19 @@ export default function Portfolio() {
                 <div className="p-6">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <h3 className="font-semibold text-gray-900">{project.title}</h3>
-                    {project.featured && <span className="px-2 py-0.5 bg-gray-50 border border-gray-200 text-gray-400 text-xs rounded-full whitespace-nowrap">精選</span>}
+                    {project.status === 'PUBLISHED' && <span className="px-2 py-0.5 bg-gray-50 border border-gray-200 text-gray-400 text-xs rounded-full whitespace-nowrap">精選</span>}
                   </div>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-4">{project.description}</p>
+                  <p className="text-gray-500 text-sm leading-relaxed mb-4">{project.briefDesc}</p>
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {project.tags.map(tag => (
                       <span key={tag} className="px-2.5 py-0.5 bg-gray-50 border border-gray-200 text-gray-500 text-xs rounded-full">{tag}</span>
                     ))}
                   </div>
                   <div className="flex gap-4 pt-3 border-t border-gray-100">
-                    {project.projectUrl && (
-                      <a href={project.projectUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors">
-                        <ExternalLink size={12} /> 查看專案
-                      </a>
-                    )}
-                    {project.githubUrl && (
-                      <a href={project.githubUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors">
-                        <GithubIcon size={12} /> 原始碼
-                      </a>
-                    )}
-                    {!project.projectUrl && !project.githubUrl && (
-                      <span className="text-xs text-gray-300">連結即將上線</span>
+                    {project.impact ? (
+                      <span className="text-xs text-gray-500">{project.impact}</span>
+                    ) : (
+                      <span className="text-xs text-gray-300">{project.year || ''}</span>
                     )}
                   </div>
                 </div>
@@ -318,24 +309,19 @@ export default function Portfolio() {
         <div className="max-w-5xl mx-auto px-6">
           <SectionHeader title="推薦人" subtitle="合作夥伴的評語" />
           <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.filter(t => t.featured).map(t => (
+            {testimonials.filter(t => t.status === 'PUBLISHED').map(t => (
               <motion.div
                 key={t.id}
                 whileHover={{ y: -6, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.15)' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 22 }}
                 className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex flex-col cursor-default"
               >
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} size={12} className="fill-gray-400 text-gray-400" />
-                  ))}
-                </div>
                 <blockquote className="text-gray-500 text-sm leading-relaxed flex-1 mb-5">
-                  &ldquo;{t.content}&rdquo;
+                  &ldquo;{t.quote}&rdquo;
                 </blockquote>
                 <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-                  <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-medium text-sm shrink-0 overflow-hidden">
-                    {t.avatar ? <img src={t.avatar} alt={t.name} className="w-full h-full object-cover" /> : t.name[0]}
+                  <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-medium text-sm shrink-0">
+                    {t.name[0]}
                   </div>
                   <div>
                     <div className="font-medium text-gray-800 text-sm">{t.name}</div>
@@ -388,7 +374,7 @@ export default function Portfolio() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1.5">姓名 *</label>
-                  <input type="text" required value={contactForm.name} onChange={e => setContactForm(p => ({ ...p, name: e.target.value }))}
+                  <input type="text" required value={contactForm.senderName} onChange={e => setContactForm(p => ({ ...p, senderName: e.target.value }))}
                     className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors"
                     placeholder="您的姓名" />
                 </div>
@@ -407,7 +393,7 @@ export default function Portfolio() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">訊息 *</label>
-                <textarea required rows={5} value={contactForm.content} onChange={e => setContactForm(p => ({ ...p, content: e.target.value }))}
+                <textarea required rows={5} value={contactForm.body} onChange={e => setContactForm(p => ({ ...p, body: e.target.value }))}
                   className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors resize-none"
                   placeholder="您的訊息..." />
               </div>
@@ -431,22 +417,6 @@ export default function Portfolio() {
           </div>
         </div>
       </footer>
-    </div>
-  );
-}
-
-/** 7-star rating display */
-function StarRating({ value, max = 7 }: { value: number; max?: number }) {
-  const stars = Math.min(Math.max(Math.round(value), 0), max);
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: max }).map((_, i) => (
-        <Star
-          key={i}
-          size={13}
-          className={i < stars ? 'fill-gray-600 text-gray-600' : 'fill-gray-200 text-gray-200'}
-        />
-      ))}
     </div>
   );
 }

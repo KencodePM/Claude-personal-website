@@ -33,33 +33,33 @@ export interface Profile {
 export interface Skill {
   id: string
   name: string
-  level: number
   category: string
-  order: number
+  sortOrder: number
 }
 
 export interface Experience {
   id: string
   company: string
-  role: string
+  jobTitle: string
   startDate: string
   endDate?: string
-  current: boolean
-  description: string
-  imageUrl?: string
-  order: number
+  isCurrent: boolean
+  bullets: string[]
+  sortOrder: number
 }
 
 export interface Project {
   id: string
   title: string
-  description: string
+  category: string
+  briefDesc: string
+  caseStudyBody: string
   tags: string[]
+  impact: string
+  year: number
   imageUrl?: string
-  projectUrl?: string
-  githubUrl?: string
-  featured: boolean
-  order: number
+  status: 'PUBLISHED' | 'DRAFT'
+  sortOrder: number
 }
 
 export interface Testimonial {
@@ -67,9 +67,8 @@ export interface Testimonial {
   name: string
   role: string
   company: string
-  content: string
-  avatar?: string
-  rating: number
-  featured: boolean
-  order: number
+  linkedinUrl?: string
+  quote: string
+  status: 'PUBLISHED' | 'DRAFT'
+  sortOrder: number
 }

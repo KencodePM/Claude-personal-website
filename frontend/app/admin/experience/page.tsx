@@ -4,14 +4,14 @@ import { useEffect, useState } from 'react';
 import { getToken, api } from '@/lib/api';
 import type { Experience } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
-import { Plus, Pencil, Trash2, X, Save, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
 
-const empty = { company: '', role: '', startDate: '', endDate: '', current: false, description: '', imageUrl: '' };
+const emptyForm = { company: '', jobTitle: '', startDate: '', endDate: '', isCurrent: false, bulletsText: '' };
 
 export default function ExperienceAdmin() {
   const [items, setItems] = useState<Experience[]>([]);
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
-  const [form, setForm] = useState(empty as any);
+  const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -19,18 +19,24 @@ export default function ExperienceAdmin() {
   const load = () => api.getExperience().then(d => { setItems(d); setLoading(false); }).catch(() => setLoading(false));
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setForm(empty); setModal('create'); };
-  const openEdit = (item: Experience) => { setForm(item); setEditId(item.id); setModal('edit'); };
+  const openCreate = () => { setForm(emptyForm); setModal('create'); };
+  const openEdit = (item: Experience) => {
+    setForm({ company: item.company, jobTitle: item.jobTitle, startDate: item.startDate, endDate: item.endDate || '', isCurrent: item.isCurrent, bulletsText: item.bullets.join('\n') });
+    setEditId(item.id);
+    setModal('edit');
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     const token = getToken()!;
+    const { bulletsText, ...rest } = form;
+    const payload = { ...rest, bullets: bulletsText.split('\n').map(s => s.trim()).filter(Boolean) };
     try {
       if (modal === 'create') {
-        await api.adminFetch('/api/experience', token, { method: 'POST', body: JSON.stringify(form) });
+        await api.adminFetch('/api/experience', token, { method: 'POST', body: JSON.stringify(payload) });
       } else {
-        await api.adminFetch(`/api/experience/${editId}`, token, { method: 'PUT', body: JSON.stringify(form) });
+        await api.adminFetch(`/api/experience/${editId}`, token, { method: 'PUT', body: JSON.stringify(payload) });
       }
       await load();
       setModal(null);
@@ -44,22 +50,8 @@ export default function ExperienceAdmin() {
     setItems(p => p.filter(i => i.id !== id));
   };
 
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm((p: any) => ({ ...p, [k]: e.target.value }));
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const token = getToken();
-    const fd = new FormData();
-    fd.append('file', file);
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      setForm((p: any) => ({ ...p, imageUrl: data.url }));
-    } catch { alert('上傳失敗'); }
-  };
+  const set = (k: keyof typeof emptyForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(p => ({ ...p, [k]: e.target.value }));
 
   return (
     <div className="max-w-3xl">
@@ -85,11 +77,11 @@ export default function ExperienceAdmin() {
                     {idx + 1}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 text-sm">{item.role}</h3>
+                    <h3 className="font-semibold text-gray-900 text-sm">{item.jobTitle}</h3>
                     <p className="text-gray-500 text-xs mt-0.5">{item.company}</p>
                     <p className="text-gray-400 text-xs mt-1">
-                      {formatDate(item.startDate)} — {item.current ? '現在' : formatDate(item.endDate || '')}
-                      {item.current && <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded-full">目前</span>}
+                      {formatDate(item.startDate)} — {item.isCurrent ? '現在' : formatDate(item.endDate || '')}
+                      {item.isCurrent && <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded-full">目前</span>}
                     </p>
                   </div>
                 </div>
@@ -102,7 +94,11 @@ export default function ExperienceAdmin() {
                   </button>
                 </div>
               </div>
-              <p className="text-gray-400 text-sm leading-relaxed mt-3 ml-11">{item.description}</p>
+              {item.bullets.length > 0 && (
+                <ul className="list-disc list-inside mt-3 ml-11 space-y-0.5">
+                  {item.bullets.map((b, i) => <li key={i} className="text-gray-400 text-sm">{b}</li>)}
+                </ul>
+              )}
             </div>
           ))}
         </div>
@@ -113,32 +109,20 @@ export default function ExperienceAdmin() {
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="公司名稱 *" value={form.company} onChange={set('company')} required />
-              <Field label="職稱 *" value={form.role} onChange={set('role')} required />
+              <Field label="職稱 *" value={form.jobTitle} onChange={set('jobTitle')} required />
               <Field label="開始日期 *" value={form.startDate} onChange={set('startDate')} required placeholder="2022-01" />
-              <Field label="結束日期" value={form.endDate || ''} onChange={set('endDate')} placeholder="2023-12" disabled={form.current} />
+              <Field label="結束日期" value={form.endDate} onChange={set('endDate')} placeholder="2023-12" disabled={form.isCurrent} />
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.current} onChange={e => setForm((p: any) => ({ ...p, current: e.target.checked, endDate: '' }))}
+              <input type="checkbox" checked={form.isCurrent}
+                onChange={e => setForm(p => ({ ...p, isCurrent: e.target.checked, endDate: '' }))}
                 className="w-4 h-4 rounded border-gray-300 accent-gray-900" />
               <span className="text-sm text-gray-600">目前在職</span>
             </label>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">公司 Logo / 圖片</label>
-              <div className="flex gap-2">
-                <input type="text" value={form.imageUrl || ''} onChange={set('imageUrl')} placeholder="https://..."
-                  className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors" />
-                <label className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-100 cursor-pointer flex items-center gap-1.5 transition-colors whitespace-nowrap">
-                  <Upload size={12} /> 上傳
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                </label>
-              </div>
-              {form.imageUrl && (
-                <img src={form.imageUrl} alt="" className="mt-2 w-10 h-10 rounded-full object-cover border border-gray-200" />
-              )}
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1.5">工作描述 *</label>
-              <textarea required rows={4} value={form.description} onChange={set('description')}
+              <label className="block text-xs text-gray-500 mb-1.5">工作要點（每行一條）</label>
+              <textarea rows={5} value={form.bulletsText} onChange={set('bulletsText')}
+                placeholder={"負責前端開發\n優化效能提升 30%"}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 transition-colors resize-none" />
             </div>
             <div className="flex gap-3 pt-2">
@@ -156,7 +140,9 @@ export default function ExperienceAdmin() {
   );
 }
 
-function Field({ label, value, onChange, required, placeholder, disabled }: any) {
+function Field({ label, value, onChange, required, placeholder, disabled }: {
+  label: string; value: string; onChange: (e: any) => void; required?: boolean; placeholder?: string; disabled?: boolean;
+}) {
   return (
     <div>
       <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
@@ -166,7 +152,7 @@ function Field({ label, value, onChange, required, placeholder, disabled }: any)
   );
 }
 
-function Modal({ title, onClose, children }: any) {
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
