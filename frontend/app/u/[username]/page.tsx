@@ -20,9 +20,10 @@ async function getPortfolio(username: string): Promise<PublicPortfolio | null> {
 export async function generateMetadata({
   params,
 }: {
-  params: { username: string }
+  params: Promise<{ username: string }>
 }): Promise<Metadata> {
-  const data = await getPortfolio(params.username)
+  const { username } = await params
+  const data = await getPortfolio(username)
   if (!data) return { title: 'Portfolio Not Found' }
   const title = data.portfolio.seoTitle || `${data.user.displayName}'s Portfolio`
   return {
@@ -40,9 +41,10 @@ export async function generateMetadata({
 export default async function PortfolioPage({
   params,
 }: {
-  params: { username: string }
+  params: Promise<{ username: string }>
 }) {
-  const data = await getPortfolio(params.username)
+  const { username } = await params
+  const data = await getPortfolio(username)
   if (!data) notFound()
 
   const { user, portfolio } = data
@@ -81,7 +83,7 @@ function SectionRenderer({
     case 'HERO':
       return (
         <section id="hero" className="text-center py-8">
-          {d.avatarUrl && (
+          {!!d.avatarUrl && (
             <img
               src={d.avatarUrl as string}
               alt={displayName}
@@ -91,16 +93,16 @@ function SectionRenderer({
           <h1 className="text-4xl font-bold text-gray-900">
             {(d.name as string) || displayName}
           </h1>
-          {d.title && (
+          {!!d.title && (
             <p className="text-xl text-gray-600 mt-2">{d.title as string}</p>
           )}
-          {d.bio && (
+          {!!d.bio && (
             <p className="text-gray-500 mt-4 max-w-xl mx-auto leading-relaxed">
               {d.bio as string}
             </p>
           )}
           <div className="flex justify-center gap-6 mt-6">
-            {d.email && (
+            {!!d.email && (
               <a
                 href={`mailto:${d.email}`}
                 className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
@@ -108,7 +110,7 @@ function SectionRenderer({
                 Email
               </a>
             )}
-            {d.linkedin && (
+            {!!d.linkedin && (
               <a
                 href={d.linkedin as string}
                 target="_blank"
@@ -118,7 +120,7 @@ function SectionRenderer({
                 LinkedIn
               </a>
             )}
-            {d.github && (
+            {!!d.github && (
               <a
                 href={d.github as string}
                 target="_blank"
@@ -160,7 +162,7 @@ function SectionRenderer({
                 <p className="text-sm text-gray-500 mt-0.5">
                   {item.company} · {item.period}
                 </p>
-                {item.description && (
+                {!!item.description && (
                   <p className="text-gray-600 mt-2 text-sm leading-relaxed">
                     {item.description}
                   </p>
@@ -188,7 +190,7 @@ function SectionRenderer({
             {items.map((item, i) => (
               <div key={i} className="border border-gray-200 rounded-lg p-5">
                 <h3 className="font-medium text-gray-900">{item.title}</h3>
-                {item.description && (
+                {!!item.description && (
                   <p className="text-sm text-gray-500 mt-1 leading-relaxed">
                     {item.description}
                   </p>
@@ -205,7 +207,7 @@ function SectionRenderer({
                     ))}
                   </div>
                 )}
-                {item.url && (
+                {!!item.url && (
                   <a
                     href={item.url}
                     target="_blank"
@@ -283,7 +285,7 @@ function SectionRenderer({
         <section id="contact">
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">Contact</h2>
           <div className="flex flex-wrap gap-4">
-            {d.email && (
+            {!!d.email && (
               <a
                 href={`mailto:${d.email}`}
                 className="text-gray-600 hover:text-gray-900 transition-colors"
@@ -291,7 +293,7 @@ function SectionRenderer({
                 {d.email as string}
               </a>
             )}
-            {d.linkedin && (
+            {!!d.linkedin && (
               <a
                 href={d.linkedin as string}
                 target="_blank"
@@ -301,7 +303,7 @@ function SectionRenderer({
                 LinkedIn
               </a>
             )}
-            {d.github && (
+            {!!d.github && (
               <a
                 href={d.github as string}
                 target="_blank"
@@ -311,7 +313,7 @@ function SectionRenderer({
                 GitHub
               </a>
             )}
-            {d.website && (
+            {!!d.website && (
               <a
                 href={d.website as string}
                 target="_blank"
