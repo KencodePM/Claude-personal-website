@@ -6,10 +6,15 @@ import Link from 'next/link';
 import { getToken, removeToken, api } from '@/lib/api';
 import {
   LayoutDashboard, User, Briefcase, FolderOpen, MessageSquare,
-  Star, LogOut, Menu, X, Zap, Sparkles
+  Star, LogOut, Menu, X, Zap, Sparkles, Ticket, Users
 } from 'lucide-react';
 
-const navItems = [
+const platformNav = [
+  { href: '/admin/invite-codes', label: '邀請碼管理', icon: Ticket },
+  { href: '/admin/users', label: '用戶列表', icon: Users },
+];
+
+const contentNav = [
   { href: '/admin', label: '總覽', icon: LayoutDashboard },
   { href: '/admin/profile', label: '個人資料', icon: User },
   { href: '/admin/skills', label: '技術能力', icon: Sparkles },
@@ -18,6 +23,33 @@ const navItems = [
   { href: '/admin/testimonials', label: '推薦人', icon: Star },
   { href: '/admin/messages', label: '聯繫訊息', icon: MessageSquare },
 ];
+
+function NavSection({
+  title, items, pathname, onClose
+}: {
+  title: string;
+  items: { href: string; label: string; icon: React.ElementType }[];
+  pathname: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="mb-2">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-3 py-2">{title}</p>
+      {items.map(({ href, label, icon: Icon }) => {
+        const active = pathname === href || (href !== '/admin' && pathname.startsWith(href));
+        return (
+          <Link key={href} href={href}
+            onClick={onClose}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors
+              ${active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
+            <Icon size={16} />
+            {label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -73,19 +105,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || (href !== '/admin' && pathname.startsWith(href));
-            return (
-              <Link key={href} href={href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors
-                  ${active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
-                <Icon size={16} />
-                {label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+          <NavSection
+            title="平台管理"
+            items={platformNav}
+            pathname={pathname}
+            onClose={() => setSidebarOpen(false)}
+          />
+          <div className="my-3 border-t border-gray-100" />
+          <NavSection
+            title="內容管理"
+            items={contentNav}
+            pathname={pathname}
+            onClose={() => setSidebarOpen(false)}
+          />
         </nav>
 
         {/* User & Logout */}
