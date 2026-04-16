@@ -6,7 +6,30 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest --passWithNoTests"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/__tests__"
+    ],
+    "testMatch": [
+      "**/*.test.ts",
+      "**/*.test.tsx"
+    ],
+    "globals": {
+      "ts-jest": {
+        "tsconfig": {
+          "esModuleInterop": true,
+          "jsx": "react"
+        }
+      }
+    },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -26,12 +49,15 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/jest": "^27.5.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "jest": "^27.5.1",
     "tailwindcss": "^4",
+    "ts-jest": "^27.1.5",
     "typescript": "^5"
   }
 }

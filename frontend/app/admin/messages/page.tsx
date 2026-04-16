@@ -13,17 +13,17 @@ export default function MessagesAdmin() {
   const load = () => {
     const token = getToken();
     if (!token) return;
-    api.adminFetch<Message[]>('/api/messages', token)
-      .then(d => { setMessages(d); setLoading(false); })
+    api.adminFetch<{ messages: Message[]; pagination: any }>('/api/messages', token)
+      .then(d => { setMessages(d.messages ?? []); setLoading(false); })
       .catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
 
   const markRead = async (id: string) => {
     const token = getToken()!;
-    await api.adminFetch(`/api/messages/${id}/read`, token, { method: 'PUT' });
-    setMessages(p => p.map(m => m.id === id ? { ...m, read: true } : m));
-    if (selected?.id === id) setSelected(p => p ? { ...p, read: true } : null);
+    await api.adminFetch('/api/messages/' + id, token, { method: 'PUT', body: JSON.stringify({ status: 'READ' }) });
+    setMessages(p => p.map(m => m.id === id ? { ...m, status: 'READ' as const } : m));
+    if (selected?.id === id) setSelected(p => p ? { ...p, status: 'READ' as const } : null);
   };
 
   const handleDelete = async (id: string) => {
@@ -35,10 +35,10 @@ export default function MessagesAdmin() {
 
   const openMessage = (msg: Message) => {
     setSelected(msg);
-    if (!msg.read) markRead(msg.id);
+    if (msg.status === 'UNREAD') markRead(msg.id);
   };
 
-  const unread = messages.filter(m => !m.read).length;
+  const unread = messages.filter(m => m.status === 'UNREAD').length;
 
   return (
     <div className="max-w-4xl">
@@ -67,15 +67,15 @@ export default function MessagesAdmin() {
                   <button key={msg.id} onClick={() => openMessage(msg)}
                     className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${selected?.id === msg.id ? 'bg-gray-50' : ''}`}>
                     <div className="flex items-center gap-2 mb-1">
-                      {!msg.read && <div className="w-1.5 h-1.5 bg-gray-700 rounded-full shrink-0" />}
-                      <span className={`text-sm flex-1 truncate ${!msg.read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                        {msg.name}
+                      {msg.status === 'UNREAD' && <div className="w-1.5 h-1.5 bg-gray-700 rounded-full shrink-0" />}
+                      <span className={`text-sm flex-1 truncate ${msg.status === 'UNREAD' ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                        {msg.senderName}
                       </span>
                       <span className="text-xs text-gray-400 shrink-0">
                         {new Date(msg.createdAt).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 truncate pl-3.5">{msg.subject || msg.content}</p>
+                    <p className="text-xs text-gray-400 truncate pl-3.5">{msg.subject || msg.body}</p>
                   </button>
                 ))}
               </div>
@@ -89,13 +89,13 @@ export default function MessagesAdmin() {
                 <div className="p-5 border-b border-gray-100">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 mb-0.5">{selected.name}</h3>
+                      <h3 className="font-semibold text-gray-900 mb-0.5">{selected.senderName}</h3>
                       <a href={`mailto:${selected.email}`} className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
                         {selected.email}
                       </a>
                     </div>
                     <div className="flex gap-1.5 shrink-0">
-                      {!selected.read && (
+                      {selected.status !== 'UNREAD' ? null : (
                         <button onClick={() => markRead(selected.id)}
                           className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors" title="標記已讀">
                           <CheckCheck size={14} />
@@ -113,15 +113,15 @@ export default function MessagesAdmin() {
                   </p>
                 </div>
                 <div className="flex-1 p-5 overflow-y-auto">
-                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{selected.content}</p>
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{selected.body}</p>
                 </div>
                 <div className="p-4 border-t border-gray-100">
                   <button
                     onClick={() => {
                       const subject = encodeURIComponent(`Re: ${selected.subject || '您的訊息'}`);
                       const body = encodeURIComponent(
-                        `親愛的 ${selected.name}，\n\n感謝您的來信！\n\n` +
-                        `---\n原始訊息：\n${selected.content}`
+                        `親愛的 ${selected.senderName}，\n\n感謝您的來信！\n\n` +
+                        `---\n原始訊息：\n${selected.body}`
                       );
                       window.open(`mailto:${selected.email}?subject=${subject}&body=${body}`, '_blank');
                     }}

@@ -16,7 +16,7 @@ export default function ProjectsAdmin() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const load = () => api.getProjects().then(d => { setItems(d); setLoading(false); }).catch(() => setLoading(false));
+  const load = () => api.getProjects().then(d => { setItems(d.projects ?? []); setLoading(false); }).catch(() => setLoading(false));
   useEffect(() => { load(); }, []);
 
   const openCreate = () => { setForm(empty); setModal('create'); };

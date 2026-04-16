@@ -14,20 +14,20 @@ export default function AdminDashboard() {
     const token = getToken();
     if (!token) return;
     Promise.all([
-      api.getProjects().catch(() => []),
+      api.getProjects().catch(() => null),
       api.getExperience().catch(() => []),
       api.getTestimonials().catch(() => []),
-      api.adminFetch<any[]>('/api/messages', token).catch(() => []),
+      api.adminFetch<any>('/api/messages', token).catch(() => null),
       api.getProfile().catch(() => null),
     ]).then(([projects, experience, testimonials, messages, profile]) => {
       setStats({
-        projects: projects.length,
-        experience: experience.length,
-        testimonials: testimonials.length,
-        messages: messages.length,
-        unread: messages.filter((m: any) => !m.read).length,
+        projects: projects?.projects?.length ?? 0,
+        experience: experience?.length ?? 0,
+        testimonials: testimonials?.length ?? 0,
+        messages: messages?.messages?.length ?? 0,
+        unread: (messages?.messages ?? []).filter((m: any) => m.status === 'UNREAD').length,
       });
-      setRecentMessages(messages.slice(0, 3));
+      setRecentMessages((messages?.messages ?? []).slice(0, 3));
       setProfile(profile);
     });
   }, []);
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
     <div className="max-w-4xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          {profile?.name ? `你好，${profile.name} 👋` : '控制台'}
+          {profile?.nameCn ? `你好，${profile.nameCn} 👋` : '控制台'}
         </h1>
         <p className="text-gray-400 text-sm mt-1">管理您的個人作品集內容</p>
       </div>
@@ -97,13 +97,13 @@ export default function AdminDashboard() {
           ) : (
             <div className="space-y-3">
               {recentMessages.map(msg => (
-                <div key={msg.id} className={`p-3 rounded-xl border transition-colors ${msg.read ? 'border-gray-100 bg-gray-50' : 'border-gray-200 bg-white'}`}>
+                <div key={msg.id} className={`p-3 rounded-xl border transition-colors ${msg.status !== 'UNREAD' ? 'border-gray-100 bg-gray-50' : 'border-gray-200 bg-white'}`}>
                   <div className="flex items-center gap-2 mb-0.5">
-                    {!msg.read && <div className="w-1.5 h-1.5 bg-gray-700 rounded-full shrink-0" />}
-                    <span className="text-sm font-medium text-gray-800 truncate">{msg.name}</span>
+                    {msg.status === 'UNREAD' && <div className="w-1.5 h-1.5 bg-gray-700 rounded-full shrink-0" />}
+                    <span className="text-sm font-medium text-gray-800 truncate">{msg.senderName}</span>
                     <span className="text-xs text-gray-400 ml-auto shrink-0">{new Date(msg.createdAt).toLocaleDateString('zh-TW')}</span>
                   </div>
-                  <p className="text-xs text-gray-400 truncate">{msg.content}</p>
+                  <p className="text-xs text-gray-400 truncate">{msg.body}</p>
                 </div>
               ))}
             </div>

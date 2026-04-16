@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import type { Profile, Project, Experience, Skill, Testimonial } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { Mail, Phone, MapPin, ExternalLink, Download, ChevronDown, Star, Menu, X, CheckCircle } from 'lucide-react';
-import { GithubIcon, LinkedinIcon, TwitterIcon } from '@/components/icons';
+import { GithubIcon, LinkedinIcon } from '@/components/icons';
 
 export default function Portfolio() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -29,7 +29,7 @@ export default function Portfolio() {
       api.getTestimonials().catch(() => []),
     ]).then(([p, pr, ex, sk, te]) => {
       setProfile(p);
-      setProjects(pr);
+      setProjects((pr as any)?.projects ?? (Array.isArray(pr) ? pr : []));
       setExperiences(ex);
       setSkills(sk);
       setTestimonials(te);
@@ -107,7 +107,7 @@ export default function Portfolio() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="#hero" className="font-semibold text-gray-900 text-lg">{profile?.name || 'Portfolio'}</a>
+          <a href="#hero" className="font-semibold text-gray-900 text-lg">{profile?.nameCn || profile?.nameEn || 'Portfolio'}</a>
           <div className="hidden md:flex items-center gap-6">
             {navLinks.map(link => (
               <a key={link.id} href={`#${link.id}`}
@@ -142,7 +142,7 @@ export default function Portfolio() {
             <div>
               <p className="text-xs text-gray-400 mb-4 tracking-widest uppercase">Full Stack Developer</p>
               <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight mb-6">
-                {profile?.name || '載入中...'}
+                {profile?.nameCn || profile?.nameEn || '載入中...'}
               </h1>
               <p className="text-lg text-gray-500 leading-relaxed mb-8 max-w-lg">{profile?.bio}</p>
               <div className="flex flex-wrap gap-3">
@@ -163,20 +163,15 @@ export default function Portfolio() {
               <div className="flex gap-4 mt-8">
                 {profile?.githubUrl && <SocialLink href={profile.githubUrl}><GithubIcon size={18} /></SocialLink>}
                 {profile?.linkedinUrl && <SocialLink href={profile.linkedinUrl}><LinkedinIcon size={18} /></SocialLink>}
-                {profile?.twitterUrl && <SocialLink href={profile.twitterUrl}><TwitterIcon size={18} /></SocialLink>}
                 {profile?.email && <SocialLink href={`mailto:${profile.email}`}><Mail size={18} /></SocialLink>}
               </div>
             </div>
             <div className="flex justify-center md:justify-end">
               <div className="relative">
                 <div className="w-64 h-64 md:w-72 md:h-72 rounded-3xl bg-gray-100 overflow-hidden border border-gray-200">
-                  {profile?.avatar ? (
-                    <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-8xl font-light text-gray-200">{profile?.name?.[0] || '?'}</span>
-                    </div>
-                  )}
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-8xl font-light text-gray-200">{profile?.nameCn?.[0] || profile?.nameEn?.[0] || '?'}</span>
+                  </div>
                 </div>
                 <div className="absolute -bottom-3 -right-3 w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 -z-10" />
                 <div className="absolute -top-3 -left-3 w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 -z-10" />
@@ -429,7 +424,7 @@ export default function Portfolio() {
       {/* Footer */}
       <footer className="py-8 border-t border-gray-100">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-gray-400 text-sm">© {new Date().getFullYear()} {profile?.name}. All rights reserved.</p>
+          <p className="text-gray-400 text-sm">© {new Date().getFullYear()} {profile?.nameCn || profile?.nameEn}. All rights reserved.</p>
           <div className="flex gap-4">
             {profile?.githubUrl && <SocialLink href={profile.githubUrl}><GithubIcon size={16} /></SocialLink>}
             {profile?.linkedinUrl && <SocialLink href={profile.linkedinUrl}><LinkedinIcon size={16} /></SocialLink>}

@@ -184,4 +184,16 @@ router.post('/:id/reply', requireAuth, async (req: Request, res: Response, next:
   }
 });
 
+// DELETE /api/messages/:id (admin)
+router.delete('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const existing = await prisma.message.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw createError('Message not found', 404);
+    await prisma.message.delete({ where: { id: req.params.id } });
+    res.json({ success: true, data: { message: 'Deleted' } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

@@ -7,7 +7,7 @@ import { Zap } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ email: 'admin@portfolio.com', password: '' });
+  const [form, setForm] = useState({ email: 'admin@hungyilee.com', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -75,8 +75,8 @@ export default function LoginPage() {
 
           <div className="mt-5 p-3 bg-gray-50 rounded-xl">
             <p className="text-xs text-gray-400 text-center">
-              預設帳號：admin@portfolio.com<br />
-              預設密碼：admin123
+              預設帳號：admin@hungyilee.com<br />
+              預設密碼：Admin1234!
             </p>
           </div>
         </div>

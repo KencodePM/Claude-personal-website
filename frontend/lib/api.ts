@@ -1,5 +1,3 @@
-// Use relative URL so requests go through Next.js rewrites (avoids CORS).
-// The rewrite rule in next.config.ts proxies /api/* to the actual backend.
 const API_URL = '';
 
 async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
@@ -11,28 +9,34 @@ async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
     const err = await res.json().catch(() => ({ error: 'Request failed' }));
     throw new Error(err.error || 'Request failed');
   }
-  return res.json();
+  const json = await res.json();
+  // Unwrap standard { success: true, data: ... } envelope
+  return json.data !== undefined ? json.data : json;
 }
 
 export const api = {
-  // Public
+  // Public — all return the data field directly
   getProfile: () => fetchAPI<any>('/api/profile'),
-  getProjects: () => fetchAPI<any[]>('/api/projects'),
+  getProjects: () => fetchAPI<{ projects: any[]; pagination: any }>('/api/projects'),
   getExperience: () => fetchAPI<any[]>('/api/experience'),
   getSkills: () => fetchAPI<any[]>('/api/skills'),
   getTestimonials: () => fetchAPI<any[]>('/api/testimonials'),
-  sendMessage: (data: object) => fetchAPI<any>('/api/messages', { method: 'POST', body: JSON.stringify(data) }),
+  sendMessage: (data: object) =>
+    fetchAPI<any>('/api/messages', { method: 'POST', body: JSON.stringify(data) }),
 
-  // Admin - with auth token
+  // Admin auth
   login: (email: string, password: string) =>
     fetchAPI<{ token: string; user: any }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
 
-  // Admin CRUD (token passed via headers)
+  // Generic admin fetch with auth token
   adminFetch: <T>(path: string, token: string, options?: RequestInit): Promise<T> =>
-    fetchAPI<T>(path, { ...options, headers: { Authorization: `Bearer ${token}`, ...options?.headers } }),
+    fetchAPI<T>(path, {
+      ...options,
+      headers: { Authorization: `Bearer ${token}`, ...options?.headers },
+    }),
 };
 
 export function getToken(): string | null {
