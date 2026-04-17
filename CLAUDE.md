@@ -1,5 +1,15 @@
 # Claude Code — 專案規則
 
+## 📚 快速記憶系統
+> 每次 session 結束後更新 `.claude/memory/session-log.md`，並同步修改相關 topic 檔案。
+> 詳細參考：`.claude/memory/MEMORY.md`（包含架構、API、前端、測試完整文件）
+
+**最新狀態（2026-04-17）**:
+- Frontend: https://claude-personal-website-hazel.vercel.app ✅
+- Backend:  https://portfolio-backend-2qry.onrender.com ✅
+- 所有 schema 欄位名稱已修正（commit 99541a5）— 34 tests passing, TypeScript clean
+- `nvm use 22` 後才能執行 `vercel --prod` 或 `next build`
+
 ## 🔐 安全規則（最高優先）
 
 **所有對外發布（commit / push / PR）前，必須確認以下項目：**

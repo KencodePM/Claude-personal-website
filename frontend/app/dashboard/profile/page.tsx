@@ -3,8 +3,6 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { getUserToken } from '@/lib/userAuth'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
@@ -15,15 +13,16 @@ export default function ProfilePage() {
   useEffect(() => {
     const token = getUserToken()
     if (!token) return
-    fetch(`${API}/api/auth/user/me`, {
+    fetch('/api/auth/user/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed')))
       .then((j) => {
         setDisplayName(j.data.displayName)
         setEmail(j.data.email)
         setUsername(j.data.username)
       })
+      .catch(() => setMessage({ type: 'error', text: '無法載入個人資料，請重新整理' }))
   }, [])
 
   async function onSubmit(e: FormEvent) {
@@ -32,7 +31,7 @@ export default function ProfilePage() {
     setMessage(null)
     try {
       const token = getUserToken()
-      const res = await fetch(`${API}/api/user/me`, {
+      const res = await fetch('/api/user/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

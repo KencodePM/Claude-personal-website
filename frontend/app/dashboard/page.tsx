@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getUserToken } from '@/lib/userAuth'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 interface UserData {
   id: string
   email: string
@@ -23,10 +21,10 @@ export default function DashboardPage() {
     setOrigin(window.location.origin)
     const token = getUserToken()
     if (!token) return
-    fetch(`${API}/api/auth/user/me`, {
+    fetch('/api/auth/user/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed to load profile')))
       .then((j) => setUser(j.data))
       .catch(() => {})
   }, [])

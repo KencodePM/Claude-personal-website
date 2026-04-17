@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import { getUserToken } from '@/lib/userAuth'
 import { PortfolioSection, SectionType } from '@/types/portfolio'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 const SECTION_LABELS: Record<SectionType, string> = {
   HERO: 'Hero',
   ABOUT: 'About',
@@ -21,15 +19,17 @@ export default function PortfolioEditorPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     const token = getUserToken()
     if (!token) return
-    fetch(`${API}/api/user/portfolio`, {
+    fetch('/api/user/portfolio', {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed')))
       .then((j) => setSections(j.data?.sections ?? []))
+      .catch(() => setLoadError('無法載入作品集內容，請重新整理頁面'))
   }, [])
 
   function updateData(id: string, data: Record<string, unknown>) {
@@ -59,7 +59,7 @@ export default function PortfolioEditorPage() {
     setMessage(null)
     try {
       const token = getUserToken()
-      const res = await fetch(`${API}/api/user/portfolio/sections`, {
+      const res = await fetch('/api/user/portfolio/sections', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -100,6 +100,12 @@ export default function PortfolioEditorPage() {
           {saving ? 'Saving…' : 'Save All'}
         </button>
       </div>
+
+      {loadError && (
+        <div className="text-sm rounded-lg px-4 py-3 bg-red-50 border border-red-200 text-red-700">
+          {loadError}
+        </div>
+      )}
 
       {message && (
         <div

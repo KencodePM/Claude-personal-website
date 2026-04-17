@@ -1,19 +1,37 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PublicPortfolio, PortfolioSection } from '@/types/portfolio'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Server Component — uses server-side env (not NEXT_PUBLIC_*).
+// BACKEND_URL is the same var that powers the Next.js rewrites proxy.
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000'
 
-async function getPortfolio(username: string): Promise<PublicPortfolio | null> {
+type PortfolioApiResult =
+  | { status: 'PUBLISHED'; data: PublicPortfolio }
+  | { status: 'UNPUBLISHED'; user: { username: string; displayName: string } }
+  | { status: 'NOT_FOUND' }
+
+async function getPortfolio(username: string): Promise<PortfolioApiResult> {
   try {
-    const res = await fetch(`${API}/api/portfolio/${username}`, {
+    const res = await fetch(`${BACKEND_URL}/api/portfolio/${username}`, {
       next: { revalidate: 60 },
     })
-    if (!res.ok) return null
+    if (res.status === 404) return { status: 'NOT_FOUND' }
+    if (!res.ok) return { status: 'NOT_FOUND' }
+
     const json = await res.json()
-    return json.data
+    const payload = json?.data
+
+    if (payload?.status === 'UNPUBLISHED') {
+      return { status: 'UNPUBLISHED', user: payload.user }
+    }
+    if (payload?.status === 'PUBLISHED') {
+      return { status: 'PUBLISHED', data: payload }
+    }
+    return { status: 'NOT_FOUND' }
   } catch {
-    return null
+    return { status: 'NOT_FOUND' }
   }
 }
 
@@ -23,8 +41,16 @@ export async function generateMetadata({
   params: Promise<{ username: string }>
 }): Promise<Metadata> {
   const { username } = await params
-  const data = await getPortfolio(username)
-  if (!data) return { title: 'Portfolio Not Found' }
+  const result = await getPortfolio(username)
+
+  if (result.status === 'NOT_FOUND') {
+    return { title: 'Portfolio Not Found' }
+  }
+  if (result.status === 'UNPUBLISHED') {
+    return { title: `${result.user.displayName} — Portfolio (未公開)` }
+  }
+
+  const data = result.data
   const title = data.portfolio.seoTitle || `${data.user.displayName}'s Portfolio`
   return {
     title,
@@ -44,10 +70,37 @@ export default async function PortfolioPage({
   params: Promise<{ username: string }>
 }) {
   const { username } = await params
-  const data = await getPortfolio(username)
-  if (!data) notFound()
+  const result = await getPortfolio(username)
 
-  const { user, portfolio } = data
+  if (result.status === 'NOT_FOUND') notFound()
+
+  if (result.status === 'UNPUBLISHED') {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center px-6">
+        <div className="max-w-md text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-50 border border-amber-200 mb-5">
+            <span className="text-2xl">🔒</span>
+          </div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {result.user.displayName} 的作品集尚未公開
+          </h1>
+          <p className="text-sm text-gray-500 mt-3 leading-relaxed">
+            作者 <span className="font-mono text-gray-700">@{result.user.username}</span> 還沒有發布這個作品集。
+            <br />
+            發布後即可在此網址瀏覽。
+          </p>
+          <Link
+            href="/"
+            className="inline-block mt-6 text-sm text-blue-600 hover:underline"
+          >
+            回到首頁 →
+          </Link>
+        </div>
+      </main>
+    )
+  }
+
+  const { user, portfolio } = result.data
   const sections = [...portfolio.sections].sort((a, b) => a.order - b.order)
 
   return (
@@ -58,13 +111,19 @@ export default async function PortfolioPage({
       </nav>
 
       <div className="max-w-3xl mx-auto px-6 py-12 space-y-16">
-        {sections.map((section) => (
-          <SectionRenderer
-            key={section.id}
-            section={section}
-            displayName={user.displayName}
-          />
-        ))}
+        {sections.length === 0 ? (
+          <div className="text-center text-gray-400 text-sm py-12">
+            此作品集尚未有內容。
+          </div>
+        ) : (
+          sections.map((section) => (
+            <SectionRenderer
+              key={section.id}
+              section={section}
+              displayName={user.displayName}
+            />
+          ))
+        )}
       </div>
     </main>
   )

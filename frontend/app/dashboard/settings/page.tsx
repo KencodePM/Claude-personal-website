@@ -4,8 +4,6 @@ import { useEffect, useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { getUserToken, removeUserToken } from '@/lib/userAuth'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 export default function SettingsPage() {
   const router = useRouter()
   const [isPublished, setIsPublished] = useState(false)
@@ -15,17 +13,20 @@ export default function SettingsPage() {
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirm: '' })
   const [pwSaving, setPwSaving] = useState(false)
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     const token = getUserToken()
     if (!token) return
     Promise.all([
-      fetch(`${API}/api/user/portfolio`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch(`${API}/api/auth/user/me`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-    ]).then(([portfolio, me]) => {
-      setIsPublished(portfolio.data?.isPublished ?? false)
-      setUsername(me.data?.username ?? '')
-    })
+      fetch('/api/user/portfolio', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : Promise.reject(new Error('portfolio'))),
+      fetch('/api/auth/user/me', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : Promise.reject(new Error('me'))),
+    ])
+      .then(([portfolio, me]) => {
+        setIsPublished(portfolio.data?.isPublished ?? false)
+        setUsername(me.data?.username ?? '')
+      })
+      .catch(() => setLoadError('無法載入設定資料，請重新整理頁面'))
   }, [])
 
   async function togglePublish() {
@@ -45,7 +46,7 @@ export default function SettingsPage() {
     setPublishLoading(true)
     try {
       const token = getUserToken()
-      const res = await fetch(`${API}/api/user/portfolio`, {
+      const res = await fetch('/api/user/portfolio', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ isPublished: value }),
@@ -66,7 +67,7 @@ export default function SettingsPage() {
     setPwSaving(true)
     try {
       const token = getUserToken()
-      const res = await fetch(`${API}/api/user/me`, {
+      const res = await fetch('/api/user/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword }),
@@ -95,6 +96,12 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+
+      {loadError && (
+        <div className="text-sm rounded-lg px-4 py-3 bg-red-50 border border-red-200 text-red-700">
+          {loadError}
+        </div>
+      )}
 
       {/* Publish toggle */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">

@@ -25,13 +25,26 @@ router.get('/:username', async (req: Request, res: Response, next: NextFunction)
       },
     });
 
-    if (!user || !user.portfolio || !user.portfolio.isPublished) {
+    // 真的找不到這個 user / portfolio -> 404
+    if (!user || !user.portfolio) {
       throw createError('Portfolio not found', 404);
+    }
+
+    // 存在但尚未發布 -> 200 + 特殊狀態，讓前端可以顯示「作者尚未公開」
+    if (!user.portfolio.isPublished) {
+      return res.json({
+        success: true,
+        data: {
+          status: 'UNPUBLISHED',
+          user: { username: user.username, displayName: user.displayName },
+        },
+      });
     }
 
     res.json({
       success: true,
       data: {
+        status: 'PUBLISHED',
         user: { username: user.username, displayName: user.displayName },
         portfolio: {
           seoTitle: user.portfolio.seoTitle,

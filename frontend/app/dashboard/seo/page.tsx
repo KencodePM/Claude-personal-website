@@ -3,8 +3,6 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { getUserToken } from '@/lib/userAuth'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 export default function SeoPage() {
   const [seoTitle, setSeoTitle] = useState('')
   const [seoDescription, setSeoDescription] = useState('')
@@ -15,15 +13,16 @@ export default function SeoPage() {
   useEffect(() => {
     const token = getUserToken()
     if (!token) return
-    fetch(`${API}/api/user/portfolio`, {
+    fetch('/api/user/portfolio', {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed')))
       .then((j) => {
         setSeoTitle(j.data?.seoTitle || '')
         setSeoDescription(j.data?.seoDescription || '')
         setOgImageUrl(j.data?.ogImageUrl || '')
       })
+      .catch(() => setMessage({ type: 'error', text: '無法載入 SEO 設定，請重新整理' }))
   }, [])
 
   async function onSubmit(e: FormEvent) {
@@ -32,7 +31,7 @@ export default function SeoPage() {
     setMessage(null)
     try {
       const token = getUserToken()
-      const res = await fetch(`${API}/api/user/portfolio`, {
+      const res = await fetch('/api/user/portfolio', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
