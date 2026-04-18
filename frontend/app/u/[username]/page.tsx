@@ -23,12 +23,20 @@ async function getPortfolio(username: string): Promise<PortfolioApiResult> {
     const json = await res.json()
     const payload = json?.data
 
+    // New shape (post-bbeca66): { status: 'PUBLISHED' | 'UNPUBLISHED', user, portfolio? }
     if (payload?.status === 'UNPUBLISHED') {
       return { status: 'UNPUBLISHED', user: payload.user }
     }
     if (payload?.status === 'PUBLISHED') {
       return { status: 'PUBLISHED', data: payload }
     }
+
+    // Legacy shape (pre-bbeca66): { user, portfolio } — always means published
+    // (old backend returned 404 for unpublished)
+    if (payload?.user && payload?.portfolio) {
+      return { status: 'PUBLISHED', data: payload }
+    }
+
     return { status: 'NOT_FOUND' }
   } catch {
     return { status: 'NOT_FOUND' }
