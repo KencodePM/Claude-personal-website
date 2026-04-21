@@ -3,6 +3,9 @@ const API_URL = '';
 async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
+    // Always include credentials so the httpOnly `admin_token` cookie flows
+    // both ways (Set-Cookie on login, Cookie on subsequent requests).
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   });
   if (!res.ok) {
@@ -50,4 +53,23 @@ export function setToken(token: string) {
 
 export function removeToken() {
   localStorage.removeItem('admin_token');
+}
+
+/**
+ * Log the admin out on both client and server — calls POST /api/auth/logout
+ * so the httpOnly cookie is cleared, then wipes the localStorage token.
+ * Swallows network errors.
+ */
+export async function logoutAdmin(): Promise<void> {
+  const token = getToken();
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+  } catch {
+    // ignore — still clear the client token
+  }
+  removeToken();
 }

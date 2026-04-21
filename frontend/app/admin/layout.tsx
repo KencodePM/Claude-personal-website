@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { getToken, removeToken, api } from '@/lib/api';
+import { getToken, removeToken, logoutAdmin, api } from '@/lib/api';
 import {
   LayoutDashboard, User, Briefcase, FolderOpen, MessageSquare,
   Star, LogOut, Menu, X, Zap, Sparkles, Ticket, Users
@@ -73,8 +73,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       });
   }, [pathname, router]);
 
-  const handleLogout = () => {
-    removeToken();
+  const handleLogout = async () => {
+    await logoutAdmin();
     router.replace('/admin/login');
   };
 

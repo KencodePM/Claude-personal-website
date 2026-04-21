@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, CookieOptions } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
@@ -8,6 +8,17 @@ import { requireAuth } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 
 const router = Router();
+
+function adminTokenCookieOpts(): CookieOptions {
+  const isProd = env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+}
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -35,6 +46,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
     );
 
+    res.cookie('admin_token', token, adminTokenCookieOpts());
     res.json({
       success: true,
       data: {
@@ -52,8 +64,8 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // POST /api/auth/logout
-router.post('/logout', requireAuth, (req: Request, res: Response) => {
-  // JWT is stateless; client should discard the token
+router.post('/logout', requireAuth, (_req: Request, res: Response) => {
+  res.clearCookie('admin_token', adminTokenCookieOpts());
   res.json({ success: true, data: { message: 'Logged out successfully' } });
 });
 

@@ -17,12 +17,21 @@ declare global {
 }
 
 export function requireUserAuth(req: Request, res: Response, next: NextFunction): void {
+  // Accept token from either the Authorization header (legacy localStorage
+  // clients) or the `portfolio_user_token` httpOnly cookie (PRD-preferred
+  // flow). Cookie wins if both are present — the cookie is the canonical
+  // session in the new flow.
+  const cookieToken = req.cookies?.portfolio_user_token as string | undefined;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const headerToken =
+    authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+  const token = cookieToken || headerToken;
+
+  if (!token) {
     res.status(401).json({ success: false, error: 'Unauthorized: No token provided' });
     return;
   }
-  const token = authHeader.split(' ')[1];
+
   try {
     const payload = jwt.verify(token, env.USER_JWT_SECRET) as UserAuthPayload;
     req.portfolioUser = payload;

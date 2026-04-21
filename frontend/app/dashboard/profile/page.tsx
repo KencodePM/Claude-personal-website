@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, FormEvent } from 'react'
-import { getUserToken } from '@/lib/userAuth'
+import { authFetch, isUserAuthenticated } from '@/lib/userAuth'
 
 export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('')
@@ -11,11 +11,8 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
-    const token = getUserToken()
-    if (!token) return
-    fetch('/api/auth/user/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    if (!isUserAuthenticated()) return
+    authFetch('/api/auth/user/me')
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed')))
       .then((j) => {
         setDisplayName(j.data.displayName)
@@ -30,13 +27,9 @@ export default function ProfilePage() {
     setSaving(true)
     setMessage(null)
     try {
-      const token = getUserToken()
-      const res = await fetch('/api/user/me', {
+      const res = await authFetch('/api/user/me', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName }),
       })
       const json = await res.json()

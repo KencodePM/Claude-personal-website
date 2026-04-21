@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { isUserAuthenticated, removeUserToken } from '@/lib/userAuth'
+import { isUserAuthenticated, logoutUser } from '@/lib/userAuth'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', exact: true },
@@ -26,8 +26,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [router])
 
-  function handleLogout() {
-    removeUserToken()
+  async function handleLogout() {
+    await logoutUser()
     router.push('/login')
   }
 

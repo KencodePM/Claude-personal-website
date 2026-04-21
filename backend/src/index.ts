@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import authRouter from './routes/auth';
@@ -15,6 +16,7 @@ import userAuthRouter from './routes/userAuth';
 import userPortfolioRouter from './routes/userPortfolio';
 import publicPortfolioRouter from './routes/publicPortfolio';
 import adminUsersRouter from './routes/adminUsers';
+import uploadRouter from './routes/upload';
 
 const app = express();
 
@@ -27,6 +29,7 @@ app.use(
 );
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
+app.use(cookieParser());
 
 // Health check
 app.get('/api/health', (_, res) => {
@@ -44,6 +47,10 @@ app.use('/api/messages', messagesRouter);
 
 // Multi-user portfolio routes
 app.use('/api/auth/user', userAuthRouter);
+// Upload must be registered BEFORE the generic /api/user router so multer
+// handles the multipart body; otherwise express.json() on the portfolio
+// router will try (and fail) to parse the binary.
+app.use('/api/user/upload', uploadRouter);
 app.use('/api/user', userPortfolioRouter);
 app.use('/api/portfolio', publicPortfolioRouter);
 app.use('/api/admin', adminUsersRouter);

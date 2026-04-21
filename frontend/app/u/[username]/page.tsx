@@ -60,13 +60,18 @@ export async function generateMetadata({
 
   const data = result.data
   const title = data.portfolio.seoTitle || `${data.user.displayName}'s Portfolio`
+  // Only set openGraph.images when the user has uploaded a custom image.
+  // Otherwise leave it unset so Next.js falls back to opengraph-image.tsx,
+  // which renders a dynamic PNG with the user's displayName.
   return {
     title,
     description: data.portfolio.seoDescription || undefined,
     openGraph: {
       title,
       description: data.portfolio.seoDescription || undefined,
-      images: data.portfolio.ogImageUrl ? [data.portfolio.ogImageUrl] : [],
+      ...(data.portfolio.ogImageUrl
+        ? { images: [data.portfolio.ogImageUrl] }
+        : {}),
       type: 'profile',
     },
   }

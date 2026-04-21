@@ -14,10 +14,21 @@ export function errorHandler(
 ): void {
   // Zod validation errors
   if (err instanceof ZodError) {
+    const flat = err.flatten();
+    const hasFieldErrors = Object.keys(flat.fieldErrors).length > 0;
+    const hasFormErrors = flat.formErrors.length > 0;
     res.status(400).json({
       success: false,
       error: 'Validation error',
-      details: err.flatten().fieldErrors,
+      // Include both — for top-level array/primitive failures, fieldErrors is empty
+      // but formErrors carries the actual message. Issues is the most complete view.
+      details: hasFieldErrors ? flat.fieldErrors : undefined,
+      formErrors: hasFormErrors ? flat.formErrors : undefined,
+      issues: err.issues.map((i) => ({
+        path: i.path.join('.') || '<root>',
+        message: i.message,
+        code: i.code,
+      })),
     });
     return;
   }

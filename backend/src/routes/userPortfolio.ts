@@ -15,12 +15,77 @@ const portfolioUpdateSchema = z.object({
   ogImageUrl: z.string().url().nullable().optional(),
 });
 
-const sectionSchema = z.object({
-  type: z.enum(['HERO', 'ABOUT', 'EXPERIENCE', 'PROJECTS', 'SKILLS', 'EDUCATION', 'CONTACT']),
-  order: z.number().int().min(0),
-  isVisible: z.boolean(),
-  data: z.record(z.unknown()),
-});
+// Canonical per-section data schemas. Fields are ALL optional (empty sections
+// must be allowed), but unknown/misnamed keys are stripped via `.strict()` so
+// clients get immediate feedback when they misspell a key.
+const heroDataSchema = z.object({
+  name: z.string().max(100).optional(),
+  title: z.string().max(100).optional(),
+  bio: z.string().max(500).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  linkedin: z.string().url().optional().or(z.literal('')),
+  github: z.string().url().optional().or(z.literal('')),
+  avatarUrl: z.string().url().optional().or(z.literal('')),
+}).strict();
+
+const aboutDataSchema = z.object({
+  content: z.string().max(5000).optional(),
+}).strict();
+
+const experienceItemSchema = z.object({
+  role: z.string().max(100),
+  company: z.string().max(100),
+  period: z.string().max(50),
+  description: z.string().max(1000).optional(),
+}).strict();
+const experienceDataSchema = z.object({
+  items: z.array(experienceItemSchema).max(50).optional(),
+}).strict();
+
+const projectItemSchema = z.object({
+  title: z.string().max(100),
+  description: z.string().max(1000).optional(),
+  url: z.string().url().optional().or(z.literal('')),
+  tags: z.array(z.string().max(30)).max(20).optional(),
+}).strict();
+const projectsDataSchema = z.object({
+  items: z.array(projectItemSchema).max(50).optional(),
+}).strict();
+
+const skillGroupSchema = z.object({
+  name: z.string().max(50),
+  skills: z.array(z.string().max(50)).max(50),
+}).strict();
+const skillsDataSchema = z.object({
+  groups: z.array(skillGroupSchema).max(20).optional(),
+}).strict();
+
+const educationItemSchema = z.object({
+  school: z.string().max(100),
+  degree: z.string().max(100),
+  period: z.string().max(50),
+}).strict();
+const educationDataSchema = z.object({
+  items: z.array(educationItemSchema).max(20).optional(),
+}).strict();
+
+const contactDataSchema = z.object({
+  email: z.string().email().optional().or(z.literal('')),
+  linkedin: z.string().url().optional().or(z.literal('')),
+  github: z.string().url().optional().or(z.literal('')),
+  website: z.string().url().optional().or(z.literal('')),
+}).strict();
+
+// Discriminated-union so each type gets the right `data` schema
+const sectionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('HERO'),       order: z.number().int().min(0), isVisible: z.boolean(), data: heroDataSchema }),
+  z.object({ type: z.literal('ABOUT'),      order: z.number().int().min(0), isVisible: z.boolean(), data: aboutDataSchema }),
+  z.object({ type: z.literal('EXPERIENCE'), order: z.number().int().min(0), isVisible: z.boolean(), data: experienceDataSchema }),
+  z.object({ type: z.literal('PROJECTS'),   order: z.number().int().min(0), isVisible: z.boolean(), data: projectsDataSchema }),
+  z.object({ type: z.literal('SKILLS'),     order: z.number().int().min(0), isVisible: z.boolean(), data: skillsDataSchema }),
+  z.object({ type: z.literal('EDUCATION'),  order: z.number().int().min(0), isVisible: z.boolean(), data: educationDataSchema }),
+  z.object({ type: z.literal('CONTACT'),    order: z.number().int().min(0), isVisible: z.boolean(), data: contactDataSchema }),
+]);
 
 const meUpdateSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
@@ -99,9 +164,13 @@ router.put('/portfolio', async (req: Request, res: Response, next: NextFunction)
 });
 
 // PUT /api/user/portfolio/sections
+// Accepts either a bare array body OR { sections: [...] } — both are
+// valid and documented. Previously only bare array worked, which was
+// confusing.
 router.put('/portfolio/sections', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const sections = z.array(sectionSchema).parse(req.body);
+    const body = Array.isArray(req.body) ? req.body : req.body?.sections;
+    const sections = z.array(sectionSchema).max(20).parse(body);
 
     const portfolio = await prisma.portfolio.findUnique({
       where: { userId: req.portfolioUser!.userId },

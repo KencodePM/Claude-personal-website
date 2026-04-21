@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { getUserToken } from '@/lib/userAuth'
+import { authFetch, isUserAuthenticated } from '@/lib/userAuth'
 
 interface UserData {
   id: string
@@ -19,11 +19,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setOrigin(window.location.origin)
-    const token = getUserToken()
-    if (!token) return
-    fetch('/api/auth/user/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    if (!isUserAuthenticated()) return
+    authFetch('/api/auth/user/me')
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed to load profile')))
       .then((j) => setUser(j.data))
       .catch(() => {})

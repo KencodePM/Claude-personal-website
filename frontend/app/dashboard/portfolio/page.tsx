@@ -1,7 +1,24 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getUserToken } from '@/lib/userAuth'
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { authFetch, isUserAuthenticated } from '@/lib/userAuth'
 import { PortfolioSection, SectionType } from '@/types/portfolio'
 
 const SECTION_LABELS: Record<SectionType, string> = {
@@ -21,12 +38,16 @@ export default function PortfolioEditorPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [loadError, setLoadError] = useState('')
 
+  // PointerSensor has a small activation distance so single-clicks on the
+  // drag handle (to expand the card) don't accidentally start a drag.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
   useEffect(() => {
-    const token = getUserToken()
-    if (!token) return
-    fetch('/api/user/portfolio', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    if (!isUserAuthenticated()) return
+    authFetch('/api/user/portfolio')
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed')))
       .then((j) => setSections(j.data?.sections ?? []))
       .catch(() => setLoadError('無法載入作品集內容，請重新整理頁面'))
@@ -42,14 +63,14 @@ export default function PortfolioEditorPage() {
     )
   }
 
-  function moveSection(id: string, dir: 'up' | 'down') {
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
     setSections((prev) => {
-      const idx = prev.findIndex((s) => s.id === id)
-      if (idx === -1) return prev
-      const next = [...prev]
-      const swapIdx = dir === 'up' ? idx - 1 : idx + 1
-      if (swapIdx < 0 || swapIdx >= next.length) return prev
-      ;[next[idx], next[swapIdx]] = [next[swapIdx], next[idx]]
+      const oldIdx = prev.findIndex((s) => s.id === active.id)
+      const newIdx = prev.findIndex((s) => s.id === over.id)
+      if (oldIdx === -1 || newIdx === -1) return prev
+      const next = arrayMove(prev, oldIdx, newIdx)
       return next.map((s, i) => ({ ...s, order: i }))
     })
   }
@@ -58,13 +79,9 @@ export default function PortfolioEditorPage() {
     setSaving(true)
     setMessage(null)
     try {
-      const token = getUserToken()
-      const res = await fetch('/api/user/portfolio/sections', {
+      const res = await authFetch('/api/user/portfolio/sections', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
           sections.map((s, i) => ({
             type: s.type,
@@ -91,7 +108,10 @@ export default function PortfolioEditorPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Portfolio Editor</h1>
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Portfolio Editor</h1>
+          <p className="text-xs text-gray-400 mt-1">拖曳左側把手即可調整區塊順序</p>
+        </div>
         <button
           onClick={save}
           disabled={saving}
@@ -119,66 +139,89 @@ export default function PortfolioEditorPage() {
         </div>
       )}
 
-      <div className="space-y-3">
-        {sections.map((section, idx) => (
-          <SectionCard
-            key={section.id}
-            section={section}
-            isFirst={idx === 0}
-            isLast={idx === sections.length - 1}
-            isExpanded={expanded === section.id}
-            onToggleExpand={() =>
-              setExpanded((prev) => (prev === section.id ? null : section.id))
-            }
-            onToggleVisible={() => toggleVisible(section.id)}
-            onMove={(dir) => moveSection(section.id, dir)}
-            onUpdateData={(data) => updateData(section.id, data)}
-          />
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {sections.map((section) => (
+              <SortableSectionCard
+                key={section.id}
+                section={section}
+                isExpanded={expanded === section.id}
+                onToggleExpand={() =>
+                  setExpanded((prev) => (prev === section.id ? null : section.id))
+                }
+                onToggleVisible={() => toggleVisible(section.id)}
+                onUpdateData={(data) => updateData(section.id, data)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   )
 }
 
-function SectionCard({
+function SortableSectionCard({
   section,
-  isFirst,
-  isLast,
   isExpanded,
   onToggleExpand,
   onToggleVisible,
-  onMove,
   onUpdateData,
 }: {
   section: PortfolioSection
-  isFirst: boolean
-  isLast: boolean
   isExpanded: boolean
   onToggleExpand: () => void
   onToggleVisible: () => void
-  onMove: (dir: 'up' | 'down') => void
   onUpdateData: (data: Record<string, unknown>) => void
 }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    // Lift the card visually while dragging
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.85 : 1,
+  }
+
   return (
-    <div className={`bg-white border rounded-xl overflow-hidden ${section.isVisible ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white border rounded-xl overflow-hidden ${
+        section.isVisible ? 'border-gray-200' : 'border-gray-100 opacity-60'
+      } ${isDragging ? 'shadow-lg' : ''}`}
+    >
       <div className="flex items-center gap-3 px-4 py-3">
-        {/* Order controls */}
-        <div className="flex flex-col gap-0.5">
-          <button
-            onClick={() => onMove('up')}
-            disabled={isFirst}
-            className="text-gray-400 hover:text-gray-700 disabled:opacity-20 text-xs leading-none"
-          >
-            ▲
-          </button>
-          <button
-            onClick={() => onMove('down')}
-            disabled={isLast}
-            className="text-gray-400 hover:text-gray-700 disabled:opacity-20 text-xs leading-none"
-          >
-            ▼
-          </button>
-        </div>
+        {/* Drag handle — only this element listens for pointer drag events,
+            so clicks on the expand/visibility toggles don't start a drag. */}
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to reorder"
+          className="text-gray-300 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none select-none transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+            <circle cx="5" cy="3" r="1.25" />
+            <circle cx="11" cy="3" r="1.25" />
+            <circle cx="5" cy="8" r="1.25" />
+            <circle cx="11" cy="8" r="1.25" />
+            <circle cx="5" cy="13" r="1.25" />
+            <circle cx="11" cy="13" r="1.25" />
+          </svg>
+        </button>
 
         <button onClick={onToggleExpand} className="flex-1 text-left">
           <span className="text-sm font-medium text-gray-900">
@@ -186,7 +229,6 @@ function SectionCard({
           </span>
         </button>
 
-        {/* Visibility toggle */}
         <button
           onClick={onToggleVisible}
           className="text-xs px-2 py-1 rounded border border-gray-200 text-gray-500 hover:border-gray-300 transition-colors"

@@ -1,21 +1,20 @@
 'use client'
 
-import { useEffect, useState, FormEvent } from 'react'
-import { getUserToken } from '@/lib/userAuth'
+import { useEffect, useState, FormEvent, useRef } from 'react'
+import { authFetch, isUserAuthenticated } from '@/lib/userAuth'
 
 export default function SeoPage() {
   const [seoTitle, setSeoTitle] = useState('')
   const [seoDescription, setSeoDescription] = useState('')
   const [ogImageUrl, setOgImageUrl] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    const token = getUserToken()
-    if (!token) return
-    fetch('/api/user/portfolio', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    if (!isUserAuthenticated()) return
+    authFetch('/api/user/portfolio')
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed')))
       .then((j) => {
         setSeoTitle(j.data?.seoTitle || '')
@@ -25,18 +24,49 @@ export default function SeoPage() {
       .catch(() => setMessage({ type: 'error', text: '無法載入 SEO 設定，請重新整理' }))
   }, [])
 
+  async function uploadOgImage(file: File) {
+    if (file.size > 4 * 1024 * 1024) {
+      setMessage({ type: 'error', text: '圖片必須小於 4 MB' })
+      return
+    }
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.type)) {
+      setMessage({ type: 'error', text: '僅支援 PNG / JPEG / WebP / GIF 格式' })
+      return
+    }
+    setUploading(true)
+    setMessage(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      // authFetch wraps fetch with credentials:'include' + Authorization header;
+      // it doesn't touch Content-Type so the browser sets the multipart boundary.
+      const res = await authFetch('/api/user/upload/og-image', {
+        method: 'POST',
+        body: fd,
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setMessage({ type: 'error', text: json.error || '上傳失敗' })
+        return
+      }
+      setOgImageUrl(json.data?.url || '')
+      setMessage({ type: 'success', text: '圖片已上傳，記得按下方 Save 儲存設定' })
+    } catch {
+      setMessage({ type: 'error', text: 'Network error' })
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setSaving(true)
     setMessage(null)
     try {
-      const token = getUserToken()
-      const res = await fetch('/api/user/portfolio', {
+      const res = await authFetch('/api/user/portfolio', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           seoTitle: seoTitle || null,
           seoDescription: seoDescription || null,
@@ -93,16 +123,54 @@ export default function SeoPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              OG Image URL
+              OG Image
             </label>
+
+            <div className="flex items-center gap-3 mb-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) uploadOgImage(f)
+                }}
+                disabled={uploading}
+                className="hidden"
+                id="og-image-file"
+              />
+              <label
+                htmlFor="og-image-file"
+                className={`inline-flex items-center px-3 py-2 border rounded-lg text-sm cursor-pointer transition-colors ${
+                  uploading
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {uploading ? '上傳中…' : '上傳圖片'}
+              </label>
+              {ogImageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setOgImageUrl('')}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  移除
+                </button>
+              )}
+            </div>
+
             <input
               value={ogImageUrl}
               onChange={(e) => setOgImageUrl(e.target.value)}
-              placeholder="https://example.com/og-image.png"
+              placeholder="或直接貼上圖片 URL（https://…）"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <p className="text-xs text-gray-400 mt-1">
-              Recommended size: 1200×630px
+              Recommended size: 1200×630px · 最大 4 MB · 支援 PNG/JPEG/WebP/GIF
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              未設定時系統會自動產生包含您名稱的預設圖。
             </p>
             {ogImageUrl && (
               <img

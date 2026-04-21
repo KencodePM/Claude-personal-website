@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { getUserToken, removeUserToken } from '@/lib/userAuth'
+import { authFetch, isUserAuthenticated, logoutUser } from '@/lib/userAuth'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -16,11 +16,10 @@ export default function SettingsPage() {
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
-    const token = getUserToken()
-    if (!token) return
+    if (!isUserAuthenticated()) return
     Promise.all([
-      fetch('/api/user/portfolio', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : Promise.reject(new Error('portfolio'))),
-      fetch('/api/auth/user/me', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : Promise.reject(new Error('me'))),
+      authFetch('/api/user/portfolio').then((r) => r.ok ? r.json() : Promise.reject(new Error('portfolio'))),
+      authFetch('/api/auth/user/me').then((r) => r.ok ? r.json() : Promise.reject(new Error('me'))),
     ])
       .then(([portfolio, me]) => {
         setIsPublished(portfolio.data?.isPublished ?? false)
@@ -45,10 +44,9 @@ export default function SettingsPage() {
   async function updatePublish(value: boolean) {
     setPublishLoading(true)
     try {
-      const token = getUserToken()
-      const res = await fetch('/api/user/portfolio', {
+      const res = await authFetch('/api/user/portfolio', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPublished: value }),
       })
       if (res.ok) setIsPublished(value)
@@ -66,10 +64,9 @@ export default function SettingsPage() {
     }
     setPwSaving(true)
     try {
-      const token = getUserToken()
-      const res = await fetch('/api/user/me', {
+      const res = await authFetch('/api/user/me', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword }),
       })
       const json = await res.json()
@@ -86,8 +83,8 @@ export default function SettingsPage() {
     }
   }
 
-  function logout() {
-    removeUserToken()
+  async function logout() {
+    await logoutUser()
     router.push('/login')
   }
 

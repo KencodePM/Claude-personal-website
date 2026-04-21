@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, CookieOptions } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
@@ -8,6 +8,20 @@ import { requireUserAuth } from '../middleware/userAuth';
 import { createError } from '../middleware/errorHandler';
 
 const router = Router();
+
+// httpOnly cookie options — `sameSite: 'none'` + `secure: true` is required
+// when the frontend (Vercel) and backend (Render) live on different
+// top-level domains, because cross-site cookies need both.
+function userTokenCookieOpts(): CookieOptions {
+  const isProd = env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days, matching default JWT_EXPIRES_IN
+  };
+}
 
 const DEFAULT_SECTIONS = [
   { type: 'HERO' as const, order: 0 },
@@ -42,8 +56,11 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     const { email, password, username, displayName, inviteCode } = registerSchema.parse(req.body);
 
     const invite = await prisma.inviteCode.findUnique({ where: { code: inviteCode } });
-    if (!invite || invite.usedAt !== null) {
-      throw createError('Invalid or already used invite code', 400);
+    if (!invite) {
+      throw createError('Invite code is invalid', 400);
+    }
+    if (invite.usedAt !== null) {
+      throw createError('Invite code has already been used', 400);
     }
 
     const [existingEmail, existingUsername] = await Promise.all([
@@ -91,6 +108,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
     );
 
+    res.cookie('portfolio_user_token', token, userTokenCookieOpts());
     res.status(201).json({
       success: true,
       data: { token, user: { id: user.id, email: user.email, username: user.username, displayName: user.displayName } },
@@ -117,6 +135,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
     );
 
+    res.cookie('portfolio_user_token', token, userTokenCookieOpts());
     res.json({
       success: true,
       data: { token, user: { id: user.id, email: user.email, username: user.username, displayName: user.displayName } },
@@ -127,7 +146,10 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // POST /api/auth/user/logout
-router.post('/logout', requireUserAuth, (req: Request, res: Response) => {
+router.post('/logout', requireUserAuth, (_req: Request, res: Response) => {
+  // Clear with the same attributes used at set time; some browsers require
+  // an exact match on sameSite/secure/path to invalidate.
+  res.clearCookie('portfolio_user_token', userTokenCookieOpts());
   res.json({ success: true, data: { message: 'Logged out successfully' } });
 });
 
